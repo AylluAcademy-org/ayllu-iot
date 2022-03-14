@@ -1,0 +1,4 @@
+.python-version
+src/__pycache__
+src/aws/__pycache__
+src/cardano/__pycache__
