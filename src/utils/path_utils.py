@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 def get_root_path() -> str:
@@ -18,3 +19,8 @@ def get_root_path() -> str:
         else:
             break
     return root_path + root_dir_name
+
+def set_working_path() -> None:
+    working_dir = get_root_path()
+    sys.path.insert(0, working_dir)
+    return None
