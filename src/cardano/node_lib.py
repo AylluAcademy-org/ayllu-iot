@@ -109,7 +109,7 @@ class Node():
         rawResult = json.loads(rawResult)
         return rawResult
         
-    def get_transactions(self, wallet_id):
+    def get_transactions(self, *args, **kwargs):
 
         """Get the list of transactions from the given addresses.
         Args: Cardano Blockchain address or wallet id to search for UTXOs
@@ -118,6 +118,8 @@ class Node():
                 ada_transactions: list of transactions with lovelace only
                 token_transactions: list of transactions including custom tokens
         """ 
+        print('Executing Get Transactions')
+        wallet_id = utils.parse_inputs(['wallet_id'], args, kwargs)
         address = self.id_to_address(wallet_id)
         command_string = [
             self.CARDANO_CLI_PATH,
@@ -153,7 +155,7 @@ class Node():
                 transactions['transactions'] = token_transactions
         return transactions
 
-    def get_balance(self, wallet_id):
+    def get_balance(self, *args, **kwargs):
         """Get the balance in dictionary format at the specified wallet address or from address base if wallet id is provided
 
         Args:
@@ -161,8 +163,10 @@ class Node():
 
         Returns:
             dict: balance dictionary listing the balance of the assets contained in the wallet
-        """        
+        """
+        print('Executing Get Balance')
         # wallet.get_addresses(id)
+        wallet_id = utils.parse_inputs(['wallet_id'], args, kwargs)
         wallet_id = self.id_to_address(wallet_id)
         transactions = self.get_transactions(wallet_id)
         balance_dict = {}
@@ -182,7 +186,6 @@ class Node():
                         balance = balance + int(k['amount'])
                     balance_dict[key]=balance
                     print(f'Total balance of "{key}" is "{balance}"')
-
         return balance_dict
 
     def utxo_selection(self, addr_origin_tx, quantity, deplete):
@@ -338,7 +341,7 @@ class Node():
         Returns:
             _type_: policyID, policy_script
         """
-        print('Executing creation of minting policy')
+        print('Executing Creation of Minting Policy')
         wallet_id = utils.parse_inputs(['wallet_id'], args, kwargs)
         path = self.KEYS_FILE_PATH + '/' + wallet_id + '/' + 'minting/'
         if not os.path.exists(path):
@@ -410,8 +413,9 @@ class Node():
         rawResult= subprocess.check_output(command_string)
         print(rawResult)
 
-    def minting(self, params):
-        id = params['message']['tx_info']['id']
+    def minting(self, *args, **kwargs):
+        print('Executing Mint Asset')
+        id, mint_info, metadata = utils.parse_inputs(['id', 'mint', 'metadata'], args, kwargs)
         addresses = Wallet.get_addresses(self, id, 'used')
         for address in addresses:
             address_origin = address['id']
@@ -424,15 +428,12 @@ class Node():
         utils.topayment_wallet(id,derivation_path)
         
         if addr_origin_balance != {}:
-
-
             # Check if minting tokens as part of the transaction
             script_path = ''
 
             deplete = False
             addr_output_array = []
 
-            mint_info = params['message']['tx_info']['mint']
             mint_string = ''
             policyid = ''
             for token_info in mint_info:
@@ -481,7 +482,6 @@ class Node():
             deplete = False
             TxHash_in, amount_equal = self.utxo_selection(addr_origin_tx,target_calculated,deplete)
             
-            metadata = params['message']['tx_info']['metadata']
             metadata_json_file = utils.save_metadata(self.TRANSACTION_PATH_FILE, metadata)
             
             ###########################
@@ -718,32 +718,3 @@ class IotExtensions(Node, Wallet):
         data["withdrawal"]="self"
         print(data)
         return super(Wallet, self).send_transaction(id, data)
-
-        elif obj[0]['cmd_id'] == 'create_minting_policy':
-            print('Executing creation of minting policy')
-            id = obj[0]['message']['id']
-            policy_script, policyID = Node.create_minting_policy(self, id)
-            main['tx_result'] = policyID
-
-        elif obj[0]['cmd_id'] == 'mint_asset':
-            print('Executing mint asset')
-
-            mint = Node.minting(self, obj[0])
-            main['tx_result'] = mint
-
-        elif obj[0]['cmd_id'] == 'get_transactions':
-            print('Executing get transactions')
-            
-            transactions = Node.get_transactions(self,obj[0]['message']['address'])
-            main['tx_result'] = transactions
-
-        elif obj[0]['cmd_id'] == 'get_balance':
-            print('Executing get balance')
-
-            balance = Node.get_balance(self,obj[0]['message']['address'])
-            main['tx_result'] = {
-                'balance': balance
-            }
-
-        obj.pop(0)
-        return main

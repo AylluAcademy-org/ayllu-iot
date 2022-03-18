@@ -204,14 +204,24 @@ def validate_vars(keywords:list, vars: dict):
             print(f'Provide a valid input for {k}')
     return vars.values()
     
-def validate_dict(keywords: list, vals: dict):
+def validate_dict(keywords: list, vals: Optional[str, dict]):
     """
     Complementing `validate_vars` and implemented
     at `parse_inputs`.
     """
-    try:
+    if isinstance(str, vals):
+      try:
+        with open(vals) as f:
+          from_json = json.loads(f)
+      except FileNotFoundError:
+        try:
+          from_json = json.loads(vals)
+        except TypeError:
+          print('Provide a valid format for JSON.')
+    else:
+      try:
         return [vals[k] for k in keywords]
-    except KeyError:
+      except KeyError:
         print('Provide a valid input')
 
 def parse_inputs(keywords: list, *args, **kwargs):

@@ -9,7 +9,6 @@ class WalletFunctions(Enum):
     """
     LIST_WALLETS = Wallet.list_wallets
     GENERATE_NEW_MNEMONIC_PHRASE = Wallet.generate_mnemonic
-    GET_ADDRESS = Wallet.get_addresses
     MIN_FEES = Wallet.min_fees
     CONFIRM_TRANSACTION = Wallet.confirm_transaction
     CONFIRM_TRANSACTION_BY_TX = Wallet.confirm_transaction_by_tx
@@ -21,6 +20,10 @@ class NodeFunctions(Enum):
     Enum loaded with the functions for Node Class, paired with actionable keywords that serve as commands for the IoT Service
     """
     QUERY_TIP = Node.query_tip_exec
+    CREATE_MINTING_POLICY = Node.create_minting_policy
+    MINT_ASSET = Node.minting
+    GET_TRANSACTIONS = Node.get_transactions
+    GET_BALANCE = Node.get_balance
 
 class IotExtensionFunctions(Enum):
     """
