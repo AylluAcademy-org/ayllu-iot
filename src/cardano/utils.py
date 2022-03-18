@@ -1,3 +1,4 @@
+from abc import ABC
 import os
 import subprocess
 from decouple import config
@@ -165,9 +166,6 @@ def towallet(wallet_id,mnemonic):
             '--testnet-magic', CARDANO_NETWORK_MAGIC, '--out-file', path + wallet_id + '.base.addr'
             ]
         subprocess.run(command_string)
-
-
-
     except:
         print('problems generating the keys or saving the files')
 
@@ -193,3 +191,34 @@ def topayment_wallet(wallet_id, derivation_path):
             path + wallet_id + '.payment.xprv', '--out-file', path + wallet_id + '.payment.skey'
         ]
         subprocess.run(command_string)
+
+def validate_vars(keywords:list, vars: dict):
+    """
+    Complementing `validate_dict` and implemented
+    at `parse_inputs`.
+    """
+    for k, v in vars.items():
+        try:
+            assert v is not None and k in keywords
+        except AssertionError:
+            print(f'Provide a valid input for {k}')
+    return vars.values()
+    
+def validate_dict(keywords: list, vals: dict):
+    """
+    Complementing `validate_vars` and implemented
+    at `parse_inputs`.
+    """
+    try:
+        return [vals[k] for k in keywords]
+    except KeyError:
+        print('Provide a valid input')
+
+def parse_inputs(keywords: list, *args, **kwargs):
+    """
+    Parse the input for Cardano objects functions.
+    """
+    if args:
+        return validate_dict(keywords, args)
+    else:
+        return validate_vars(keywords, kwargs)

@@ -1,28 +1,39 @@
+# General Imports
+import os
+from shutil import ExecError
 import subprocess
+import sys
+import random
 from itertools import groupby
 from operator import itemgetter
-import os
+# import logging
 import json
-import utils
-import random
-import requests
-import sys
 from base64 import b16encode
+import requests
+# Module Imports
+import src.cardano.utils as utils
+from src.utils.path_utils import get_root_path
+
+working_dir = get_root_path()
+cardano_configs = working_dir + 'config/cardano_config.json'
 
 class Node():
-
-    def __init__(self, working_dir):
-
-        with open(working_dir + '/config_file.json') as file:
-            params=json.load(file)
-
+    """
+    config_path: str, default= 'config/cardano_config.json'
+        Configurations for interacting with Cardano network
+    """
+    def __init__(self, config_path=cardano_configs):
+        try:
+            with open(config_path) as file:
+                params = json.loads(file)
+        except FileNotFoundError:
+            print('The indicated file wasn\'t found')
+        
         self.CARDANO_NETWORK_MAGIC = params['node']['CARDANO_NETWORK_MAGIC']
-
         self.CARDANO_CLI_PATH = params['node']['CARDANO_CLI_PATH']
-
         self.CARDANO_NETWORK = params['node']['CARDANO_NETWORK']
-
         self.TRANSACTION_PATH_FILE = params['node']['transactions']
+
         if not os.path.exists(self.TRANSACTION_PATH_FILE):
             os.makedirs(self.TRANSACTION_PATH_FILE)
 
@@ -32,7 +43,9 @@ class Node():
         self.URL = params['node']['URL']
 
     def insert_command(self, index, step, command_string, opt_commands):
-        """ function to insert commands to be executed in subprocess"""
+        """
+        Function to insert commands to be executed in subprocess
+        """
         i = 0
         for opt_command in opt_commands:
             command_string.insert(index+i,str(opt_command))
@@ -83,7 +96,8 @@ class Node():
 
         Returns:
             _type_: json with latest epoch, hash, slot, block, era, syncProgress
-        """        
+        """
+        print('Executing Query Tip')
         command_string = [
             self.CARDANO_CLI_PATH,
             'query', 'tip']
@@ -315,7 +329,7 @@ class Node():
 
         subprocess.check_output(command_string)
 
-    def create_minting_policy(self, wallet_id):
+    def create_minting_policy(self, *args, **kwargs):
 
         """_summary_
          Args:
@@ -323,11 +337,12 @@ class Node():
 
         Returns:
             _type_: policyID, policy_script
-        """       
+        """
+        print('Executing creation of minting policy')
+        wallet_id = utils.parse_inputs(['wallet_id'], args, kwargs)
         path = self.KEYS_FILE_PATH + '/' + wallet_id + '/' + 'minting/'
         if not os.path.exists(path):
             os.makedirs(path)
-        
         # Generate key pairs for minting associated to specific policy script
         command_string = [
             'cardano-cli', 'address', 'key-gen', '--verification-key-file', path + 'tmp.policy.vkey',
@@ -516,27 +531,34 @@ class Node():
         
         return mint
 
-       
-
 class Wallet():
-
-    def __init__(self, working_dir):
-        with open(working_dir + '/config_file.json') as file:
-            params=json.load(file)
+    """
+    config_path: str, default= 'config/cardano_config.json'
+        Configurations for interacting with Cardano network
+    """
+    def __init__(self, config_path=cardano_configs):
+        try:
+            with open(config_path) as file:
+                params = json.loads(file)
+        except FileNotFoundError:
+            print('The indicated file wasn\'t found')
         
         self.URL = params['node']['URL']
     
     def list_wallets(self):
         """Return a list of known wallets, ordered from oldest to newest.
         No params needed"""
+        print('Executing List of Known Wallets')
         request_status_url = self.URL
         wallets_info = requests.get(request_status_url)
         return wallets_info.json()
 
-    def generate_mnemonic(self, size=24):
+    def generate_mnemonic(self, size=24, *args, **kwargs):
         """Create mnemonic sentence (list of mnemonic words)
         Input: size number of words: 24 by default"""
         try:
+            size = utils.parse_inputs(['size'], args, kwargs) if size != 24 else size
+            print('Executing Generate New Mnemonic Phrase')
             # Generate mnemonic
             command_string = [
                 'cardano-wallet', 'recovery-phrase', 'generate',
@@ -546,7 +568,6 @@ class Wallet():
             mnemonic = mnemonic.decode('utf-8')
             mnemonic = mnemonic.split()
             return mnemonic
-
         except OSError as e:
             print("Execution failed:", e, file=sys.stderr)
 
@@ -572,7 +593,7 @@ class Wallet():
         wallet_info = requests.get(request_status_url)
         return wallet_info.json()
 
-    def get_addresses(self, id,addr_state):
+    def get_addresses(self, id, addr_state):
         """Get only unused addresses for specific wallet
         Inputs: Id of the wallet, addr_state: used, unused, all
         """
@@ -589,10 +610,13 @@ class Wallet():
         addresses = requests.get (request_address_url)
         return addresses.json()
 
-    def delete_wallet(self, id):
+    def delete_wallet(self, *args, **kwargs):
         """Delete wallet 
         Inputs: Id of the wallet
         """
+        print('Executing Wallet Deletion')
+        id = utils.parse_inputs(['id'], args, kwargs)
+        print(id)
         request_status_url = self.URL + id
         r = requests.delete(request_status_url)
         print(r.status_code)
@@ -603,12 +627,13 @@ class Wallet():
             }
         return r
 
-    def min_fees(self, id, data):
+    def min_fees(self, *args, **kwargs):
         """ Estimate min fees for the transaction
         Inputs: Id of the wallet
                 data with details of the transactio like metadata, address to, amount, etc
         Return: estimated_min, estimated_max, minimum_coins, deposit"""
-
+        print('Executing Min Fees')
+        id, data = utils.parse_inputs(['id', 'data'], args, kwargs)
         data["time_to_live"]={
                         "quantity": 10,
                         "unit": "second"
@@ -630,136 +655,70 @@ class Wallet():
         r = r.json()
         return r
 
-    def confirm_transaction(self, id):
+    def confirm_transaction(self, *args, **kwargs):
         """Lists all incoming and outgoing wallet's transactions.
         Inputs: Id of the wallet
         Return: json with details of the transaction and the status """
+        print('Executing Confirmation of all the Transactions')
+        id = utils.parse_inputs(['id'], args, kwargs)
         request_address_url = self.URL + id + '/transactions'
         r = requests.get(request_address_url)
         r = r.json()
         return r
     
-    def confirm_transaction_by_tx(self, id, tx_id):
+    def confirm_transaction_by_tx(self, *args, **kwargs):
         """Lists all incoming and outgoing wallet's transactions.
         Inputs: Id of the wallet
         Return: json with details of the transaction and the status """
+        print('Executing Confirmation of the Transaction')
+        id, tx_id = utils.parse_inputs(['id', 'tx_id'], args, kwargs)
         request_address_url = self.URL + id + '/transactions/' + tx_id
         r = requests.get(request_address_url)
         r = r.json()
         return r
 
-    def assets_balance(self, id):
+    def assets_balance(self, *args, **kwargs):
         """ List all assets associated with the wallet, and their metadata if known.
             An asset is associated with a wallet if it is involved in a transaction of the wallet.
         Inputs: Id of the wallet
         Return: json with the policyid, asset name, fingerprint and metadata
         """
+        print('Executing Assets Info')
+        id = utils.parse_inputs(['id'], args, kwargs)
         request_address_url = self.URL + id + '/assets'
         r = requests.get(request_address_url)
         r = r.json()
         return r
 
-class IOT(Node, Wallet):
-    def __init__(self, working_dir) -> None:
-        super().__init__(working_dir)
+class IotExtensions(Node, Wallet):
+    def __init__(self, config_path=cardano_configs):
+        super().__init__(config_path=config_path)
 
+    def get_wallet_info(self, input_vals: dict) -> dict:
+        print('Executing Wallet Info')
+        id = utils.validate_dict(['id'], input_vals)
+        address = self.get_addresses(id, 'unused')
+        wallet_info = self.wallet_info(id)
+        return {'address': address, 'wallet_info': wallet_info}
+
+    def generate_wallet(self, input_vals: dict) -> dict:
+        print('Executing Generate Wallet')
+        mnemonic, name, passphrase = utils.validate_dict(['mnemonic', 'name', 'passphrase'], input_vals)
+        wallet_status = self.create_wallet(name, passphrase, mnemonic)
+        id = wallet_status['id']
+        utils.towallet(id, mnemonic)
+        address = self.get_addresses(id, 'unused')
+        return wallet_status, address
     
-    def message_treatment(self, obj, client_id):
+    def send_transaction(self, input_vals: dict):
+        print('Executing Send Transaction')
+        id, data = utils.validate_dict(['id', 'data'], input_vals)
+        data["time_to_live"]={"quantity": 60,
+                            "unit": "second"}
+        data["withdrawal"]="self"
+        print(data)
+        return super(Wallet, self).send_transaction(id, data)
 
-        """Main function that receives the object from the pubsub and defines which execution function to call"""
-        main ={
-            'client_id': client_id
-        }
-
-        if obj[0]['cmd_id'] == 'query_tip':
-            print('Executing query tip')
-            result = Node.query_tip_exec(self)
-            main.update(result)
-
-        if obj[0]['cmd_id'] == 'list_wallets':
-            print('Executing list of known wallets')
-            result = Wallet.list_wallets(self)
-            main['list_wallets'] = result
-            # main.update(result)
-            
-        elif obj[0]['cmd_id'] == 'generate_new_mnemonic_phrase':
-            print('Executing generate_new_mnemonic_phrase')
-            size = obj[0]['message']['size']
-            mnemonic = Wallet.generate_mnemonic(self, size)
-            main['wallet_mnemonic']=mnemonic
-    
-        elif obj[0]['cmd_id'] == 'generate_wallet':
-            print('Executing generate wallet')
-            name = obj[0]['message']['wallet_name']
-            passphrase = obj[0]['message']['passphrase']
-            mnemonic = obj[0]['message']['mnemonic']
-
-            wallet_status = Wallet.create_wallet(self, name, passphrase, mnemonic)
-            main['wallet_status']=wallet_status
-            id = wallet_status['id']
-            utils.towallet(id, mnemonic)
-
-            address = Wallet.get_addresses(self, wallet_status['id'], 'unused')
-            main['address']=address
-
-        elif obj[0]['cmd_id'] == 'wallet_info':
-            print('Executing wallet info')
-            id = obj[0]['message']['id']
-            wallet_info = Wallet.wallet_info(self, id)
-            main['wallet_info']=wallet_info
-            address = Wallet.get_addresses(self, id, 'unused')
-            main['address']=address
-        
-        elif obj[0]['cmd_id'] == 'min_fees':
-            print('Executing min fees')
-            id = obj[0]['message']['id']
-            tx_info = obj[0]['message']['tx_info']
-            tx_result = Wallet.min_fees(self, id, tx_info)
-            main['min_fees']= tx_result
-        
-        elif obj[0]['cmd_id'] == 'send_transaction':
-            print('Executing send transaction')
-            id = obj[0]['message']['id']
-            tx_info = obj[0]['message']['tx_info']
-            tx_info["time_to_live"]={
-                            "quantity": 60,
-                            "unit": "second"
-                            }
-            tx_info["withdrawal"]="self"
-            print(tx_info)
-            tx_result = Wallet.send_transaction(self, id, tx_info)
-            main['tx_result']= tx_result
-        
-        elif obj[0]['cmd_id'] == 'confirm_transaction':
-            print('Executing confirmation of all the transactions')
-            id = obj[0]['message']['id']
-            transactions = Wallet.confirm_transaction(self, id)
-            main['tx_result'] = {
-                'transactions': transactions
-            }
-        
-        elif obj[0]['cmd_id'] == 'confirm_transaction_by_tx':
-            print('Executing confirmation of the transaction')
-            id = obj[0]['message']['id']
-            tx_id = obj[0]['message']['tx_id']
-            transactions = Wallet.confirm_transaction_by_tx(self, id, tx_id)
-            main['tx_result'] = {
-                'transactions_by_tx': transactions
-            }
-        
-        elif obj[0]['cmd_id'] == 'delete_wallet':
-            print('Executing wallet deletion')
-            id = obj[0]['message']['id']
-            print(id)
-            wallet_info = Wallet.delete_wallet(self, id)
-            main['tx_result'] = wallet_info
-
-        elif obj[0]['cmd_id'] == 'assets_balance':
-            print('Executing assets info')
-            id = obj[0]['message']['id']
-            assets_balance = Wallet.assets_balance(self, id)
-            main['assets_balance']=assets_balance
-        
         elif obj[0]['cmd_id'] == 'create_minting_policy':
             print('Executing creation of minting policy')
             id = obj[0]['message']['id']
