@@ -17,7 +17,7 @@ from src.utils.path_utils import get_root_path
 working_dir = get_root_path()
 cardano_configs = working_dir + 'config/cardano_config.json'
 
-class Node():
+class Node:
     """
     config_path: str, default= 'config/cardano_config.json'
         Configurations for interacting with Cardano network
@@ -531,7 +531,7 @@ class Node():
         
         return mint
 
-class Wallet():
+class Wallet:
     """
     config_path: str, default= 'config/cardano_config.json'
         Configurations for interacting with Cardano network
