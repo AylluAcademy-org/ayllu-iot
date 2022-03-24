@@ -1,3 +1,4 @@
+"""
 import os
 import json
 from src.cardano.base import Node
@@ -35,3 +36,4 @@ def test_query_protocol():
 
 def test_query_tip_exec():
     pass
+"""

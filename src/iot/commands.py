@@ -1,7 +1,7 @@
-# General Imports
+# General imports
 from enum import Enum
-# Module Imports
-from src.cardano.node_lib import Wallet, Node, IotExtensions
+# Package imports
+from src.cardano.base import Wallet, Node, IotExtensions
 
 class WalletFunctions(Enum):
     """

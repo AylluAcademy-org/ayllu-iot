@@ -1,6 +1,7 @@
 from abc import ABC
 import os
 import subprocess
+from typing import Union
 from decouple import config
 import json
 
@@ -204,7 +205,7 @@ def validate_vars(keywords:list, vars: dict):
             print(f'Provide a valid input for {k}')
     return vars.values()
     
-def validate_dict(keywords: list, vals: Optional[str, dict]):
+def validate_dict(keywords: list, vals: Union[str, dict]):
     """
     Complementing `validate_vars` and implemented
     at `parse_inputs`.
@@ -213,9 +214,11 @@ def validate_dict(keywords: list, vals: Optional[str, dict]):
       try:
         with open(vals) as f:
           from_json = json.loads(f)
+          return from_json
       except FileNotFoundError:
         try:
           from_json = json.loads(vals)
+          return from_json
         except TypeError:
           print('Provide a valid format for JSON.')
     else:
