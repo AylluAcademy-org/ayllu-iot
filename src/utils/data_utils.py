@@ -11,7 +11,7 @@ def flatten_dict(d, parent_key='', sep=''):
     """
     items = []
     for k, v in d.items():
-        nk = parent_key + sep + str(k) if parent_key else k
+        nk = str(k) if parent_key else k
         try:
             items.extend(flatten_dict(v, nk, sep=sep).items())
         except AttributeError:

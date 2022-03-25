@@ -32,15 +32,16 @@ class Device(ABC):
     _metadata: dict
 
     @property
-    def _device_id(self) -> str:
+    @abstractmethod
+    def device_id(self) -> str:
         """
         Unique identifier for device object
         """
-        return self._device_id
+        pass
 
     @property
     @abstractmethod
-    def _metadata(self):
+    def metadata(self):
         """
         Information to be used by object configurations or other 
         methods

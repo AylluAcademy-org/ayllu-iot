@@ -1,6 +1,7 @@
+"""
+"""
 # General imports
 import json
-from enum import Enum
 # Package imports
 from src.iot.devices import DeviceCardano
 from src.cardano.utils import parse_inputs
@@ -11,6 +12,7 @@ def basic_math(*args, **kwargs) -> list:
     """
 
     print('Executing Basic Math')
+    print(f"Printing *kwargs: {kwargs}")
     return_list = parse_inputs(['return_list'], args, kwargs)
 
     a = 2 + 2
@@ -23,31 +25,27 @@ def basic_math(*args, **kwargs) -> list:
         return (a, b, c)
 
 def basic_dict() -> dict:
+    """
+    """
     return {'status': 'successful'}
 
 def basic_json(input_dict: dict):
+    """
+    """
     return json.dumps(input_dict)
 
-class TestDeviceCardanoFunctionsOne(Enum):
-    """
-    Enum loaded with testing functions for DeviceCardano
-    with numerical values
-    """
-    BASIC_MATH = basic_math
+TestDeviceCardanoFunctionsOne = {
+    'BASIC_MATH': basic_math
+    }
 
-class TestDeviceCardanoFunctionsTwo(Enum):
-    """
-    Enum loaded with testing functions for DeviceCardano
-    with text values
-    """
-    BASIC_DICT = basic_dict
-    BASIC_JSON = basic_json
-
-# If necessary could add another Enum for other type of functions
+TestDeviceCardanoFunctionsTwo = {
+    'BASIC_DICT': basic_dict,
+    'BASIC_JSON': basic_json
+    }
 
 class TestDeviceCardano(DeviceCardano):
     """
-    Extension of class for testing purposes. As functions had their 
+    Extension of class for testing purposes. As functions had their
     own tests, we  just need to check for manipulation and call.
 
     Attributes
@@ -61,10 +59,6 @@ class TestDeviceCardano(DeviceCardano):
         Should contain only Enums such as in `scr.iot.commands`
     """
 
-    _device_id: str
-    _metadata: dict
-    _functions_enums: list
-
     def __init__(self, device_id: str):
         """
         Constructor for TestDeviceCardano class.
@@ -74,7 +68,6 @@ class TestDeviceCardano(DeviceCardano):
         device_id: str
             Unique identifier for the device.
         """
-        super(DeviceCardano, self).__init__(device_id)
-        self._device_id = super(DeviceCardano, self)._device_id
-        self._metadata = super(DeviceCardano, self)._metadata
-        self._functions_enums = [TestDeviceCardanoFunctionsOne, TestDeviceCardanoFunctionsTwo]
+        super().__init__(id=device_id, \
+                            functions=[TestDeviceCardanoFunctionsOne, \
+                                        TestDeviceCardanoFunctionsTwo])

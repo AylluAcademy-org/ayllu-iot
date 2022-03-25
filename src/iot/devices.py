@@ -34,11 +34,11 @@ class DeviceCardano(Device):
     from src.iot.commands import WalletFunctions, NodeFunctions, \
                                 IotExtensionFunctions
     # To-do: Only import if not loaded
-    _device_id: str
-    _metadata: dict
-    _functions_enums: list
+    device_id: str
+    metadata: dict
+    functions_list: list
 
-    def __init__(self, device_id: str) -> None:
+    def __init__(self, id: str, functions: list=[WalletFunctions, NodeFunctions, IotExtensionFunctions]) -> None:
         """
         Constructor for DeviceCardano class.
 
@@ -47,20 +47,23 @@ class DeviceCardano(Device):
         device_id: str
             Unique identifier for the device.
         """
-        super(Device, self).__init__(device_id)
-        self._device_id = device_id
+        self._device_id = id
         self._metadata = None
-        self._functions_enums = [WalletFunctions, NodeFunctions, \
-                                IotExtensionFunctions]
+        self._functions_list = functions
+        super().__init__()
 
     @property
-    def _metadata(self) -> dict:
+    def device_id(self) -> str:
+        return self._device_id
+
+    @property
+    def metadata(self) -> dict:
         """
         Get the current metadata.
         """
         return self._metadata
     
-    @_metadata.setter
+    @metadata.setter
     def metadata(self, vals: Union[str, dict]) -> None:
         """
         Set a valid metadata parameter.
@@ -74,25 +77,18 @@ class DeviceCardano(Device):
         """
         if isinstance(vals, str):
             try:
-                with open(working_dir + vals) as file:
-                    self.metadata=json.loads(file)
-                    if check_nested_dicts(self.metadata):
-                        self.metadata = flatten_dict(self.metadata)
+                with open(f'{working_dir}/{vals}') as file:
+                    self._metadata=json.load(file)
+                    if check_nested_dicts(self._metadata):
+                        self._metadata = flatten_dict(self._metadata)
             except FileNotFoundError:
                 logging.error('The provided file was not found')
         elif isinstance(vals, dict):
-            self.metadata=vals
-            if check_nested_dicts(self.metadata):
-                self.metadata = flatten_dict(self.metadata)
+            self._metadata=vals
+            if check_nested_dicts(self._metadata):
+                self._metadata = flatten_dict(self._metadata)
         else:
             logging.error('Not supported configuration\'s input')
-
-    @property
-    def _functions_enums(self) -> list:
-        """
-        Get the current functions available for operations.
-        """
-        return self._functions_enums
 
     def message_treatment(self, message) -> dict:
         """
@@ -111,24 +107,24 @@ class DeviceCardano(Device):
             passed down through the message.
         """
         try:
-            super.validate_message(message)
-            super.validate_inputs(message.message)
+            super().validate_message(message)
+            super().validate_inputs(message.message)
         except AssertionError:
             print('Invalid Message Object')
         main = {'client_id': message.client_id}
         cmd = message.message['cmd'].upper()
-        func = [o.cmd for o in self._functions_enums \
-                for f in o if f == cmd]
+        func = [f for funcs in self._functions_list \
+                for n, f in funcs.items() if n == cmd][0]
         if not func:
             raise ValueError("The command does not exists")
         if message.message['args']:
             params = func(message.message['args'])
         else:
             params = func()
-        if isinstance(list, params) or isinstance(tuple, params):
+        if isinstance(params, list) or isinstance(params, tuple):
             p = {f"output_{v}": params[v] for v in range(len(params))}
             main.update(p)
-        elif isinstance(dict, params):
+        elif isinstance(params, dict):
             main.update(params)
         else:
             try:
