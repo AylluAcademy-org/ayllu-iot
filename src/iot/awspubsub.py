@@ -1,20 +1,23 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0.
 
-from awscrt import io, mqtt, auth
-from awsiot import mqtt_connection_builder
 import sys
+from pathlib import Path
 import threading
 import time
 from uuid import uuid4
 import json
 from datetime import datetime
-from node_lib import IOT
+
+from awscrt import io, mqtt, auth
+from awsiot import mqtt_connection_builder
 
 # Load files and config parameters
-working_dir = "/home/cardanodatos/git/cnft-python/"
+from ..utils.path_utils import get_root_path
 
-with open(working_dir + 'config_file.json') as file:
+working_dir = get_root_path()
+
+with open(working_dir + 'config/iot_config.json') as file:
     params=json.load(file)
 
 endpoint = params['AWS_IOT']['endpoint']
@@ -32,11 +35,6 @@ io.init_logging(getattr(io.LogLevel, verbosity), 'stderr')
 received_count = 0
 received_all_event = threading.Event()
 
-# Callback when connection is accidentally lost.
-def on_connection_interrupted(connection, error, **kwargs):
-    print("Connection interrupted. error: {}".format(error))
-
-
 # Callback when an interrupted connection is re-established.
 def on_connection_resumed(connection, return_code, session_present, **kwargs):
     print("Connection resumed. return_code: {} session_present: {}".format(return_code, session_present))
@@ -48,7 +46,6 @@ def on_connection_resumed(connection, return_code, session_present, **kwargs):
         # Cannot synchronously wait for resubscribe result because we're on the connection's event-loop thread,
         # evaluate result with a callback instead.
         resubscribe_future.add_done_callback(on_resubscribe_complete)
-
 
 def on_resubscribe_complete(resubscribe_future):
         resubscribe_results = resubscribe_future.result()
@@ -92,7 +89,12 @@ def on_message_received(topic, payload):
         else: 
             print("No message received. Object empty")
     
-if __name__ == '__main__':
+def run_iot(iot_flag):
+    if iot_flag:
+        sys.path.insert(0, working_dir)
+        from src.cardano.node_lib import IoT
+    else:
+        from iot import IoT
     # Spin up resources
     event_loop_group = io.EventLoopGroup(1)
     host_resolver = io.DefaultHostResolver(event_loop_group)
@@ -143,7 +145,7 @@ if __name__ == '__main__':
 
     # Prevents the execution of the code below (Disconnet) while received_all_event flag is False
     received_all_event.wait()
-
+    
     print("{} message(s) received.".format(received_count))
 
     # Disconnect

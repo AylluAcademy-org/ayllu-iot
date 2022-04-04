@@ -1,12 +1,20 @@
+# General imports
+from abc import ABC
 import os
 import subprocess
+from typing import Union
 from decouple import config
 import json
 
+# Package imports
+from src.utils.path_utils import get_root_path
 
-with open('./config_file.json') as file:
+working_dir = get_root_path()
+cardano_configs = f'{working_dir}/config/cardano_config.json'
+
+with open(cardano_configs) as file:
     params=json.load(file)
-keys_file_path = params['node']['keys_path']
+keys_file_path = params['node']['KEYS_FILE_PATH']
 if not os.path.exists(keys_file_path):
     os.makedirs(keys_file_path)
 
@@ -165,9 +173,6 @@ def towallet(wallet_id,mnemonic):
             '--testnet-magic', CARDANO_NETWORK_MAGIC, '--out-file', path + wallet_id + '.base.addr'
             ]
         subprocess.run(command_string)
-
-
-
     except:
         print('problems generating the keys or saving the files')
 
@@ -193,3 +198,48 @@ def topayment_wallet(wallet_id, derivation_path):
             path + wallet_id + '.payment.xprv', '--out-file', path + wallet_id + '.payment.skey'
         ]
         subprocess.run(command_string)
+
+def validate_vars(keywords:list, input_vars: dict):
+    """
+    Complementing `validate_dict` and implemented
+    at `parse_inputs`.
+    """
+    for key, val in input_vars.items():
+        try:
+            assert val is not None and key in keywords
+        except AssertionError:
+            print(f'Provide a valid input for {key}')
+    return vars.values()
+    
+def validate_dict(keywords: list, vals: Union[str, dict]):
+    """
+    Complementing `validate_vars` and implemented
+    at `parse_inputs`.
+    """
+    print(vals)
+    if isinstance(vals, str):
+      try:
+        with open(vals) as f:
+          from_json = json.load(f)
+          return from_json
+      except FileNotFoundError:
+        try:
+          from_json = json.loads(vals)
+          return from_json
+        except TypeError:
+          print('Provide a valid format for JSON.')
+    else:
+      try:
+        return [val for arg in vals for name, val in arg.items() \
+                if name in keywords]
+      except AttributeError:
+        print('Provide a valid input')
+
+def parse_inputs(keywords: list, *args, **kwargs):
+    """
+    Parse the input for Cardano objects functions.
+    """
+    if args:
+        return validate_dict(keywords, args[0])
+    else:
+        return validate_vars(keywords, kwargs)

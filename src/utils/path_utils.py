@@ -20,7 +20,14 @@ def get_root_path() -> str:
             break
     return root_path + root_dir_name
 
-def set_working_path() -> None:
+def set_working_path(target: list=[]) -> None:
+    """
+    """
     working_dir = get_root_path()
-    sys.path.insert(0, working_dir)
+    if target:
+        for t in target:
+            n_dir = f'{working_dir}/{t}'
+            sys.path.insert(0, n_dir)
+    else:
+        sys.path.insert(0, working_dir)
     return None
