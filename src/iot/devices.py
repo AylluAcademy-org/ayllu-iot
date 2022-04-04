@@ -4,21 +4,21 @@ import logging
 from typing import Union
 # Module Imports
 from src.iot.core import Device
-from src.iot.commands import IotExtensionFunctions, NodeFunctions, \
-                            WalletFunctions
 from src.utils.path_utils import get_root_path
 from src.utils.data_utils import check_nested_dicts, flatten_dict
 
 working_dir = get_root_path()
+
+
 class DeviceIot(Device):
     # Pending implementation
     def __init__(self):
         pass
 
+
 class DeviceCardano(Device):
     """
-    Class implementation for IoT device interacting with Cardano 
-    interfaces
+    Class implementation for IoT device interacting with Cardano interfaces
 
     Attributes
     ----------
@@ -32,13 +32,15 @@ class DeviceCardano(Device):
     """
 
     from src.iot.commands import WalletFunctions, NodeFunctions, \
-                                IotExtensionFunctions
+        IotExtensionFunctions
     # To-do: Only import if not loaded
     device_id: str
     metadata: dict
     functions_list: list
 
-    def __init__(self, id: str, functions: list=[WalletFunctions, NodeFunctions, IotExtensionFunctions]) -> None:
+    def __init__(self, id: str,
+                 functions: list = [WalletFunctions, NodeFunctions,
+                                    IotExtensionFunctions]) -> None:
         """
         Constructor for DeviceCardano class.
 
@@ -62,7 +64,7 @@ class DeviceCardano(Device):
         Get the current metadata.
         """
         return self._metadata
-    
+
     @metadata.setter
     def metadata(self, vals: Union[str, dict]) -> None:
         """
@@ -71,20 +73,20 @@ class DeviceCardano(Device):
         Parameters
         ---------
         vals: Optional[str, dict]
-            The parameters to be set. If str it should be an json 
-            file to be read. Else, an already loaded python 
+            The parameters to be set. If str it should be an json
+            file to be read. Else, an already loaded python
             dictionary.
         """
         if isinstance(vals, str):
             try:
                 with open(f'{working_dir}/{vals}') as file:
-                    self._metadata=json.load(file)
+                    self._metadata = json.load(file)
                     if check_nested_dicts(self._metadata):
                         self._metadata = flatten_dict(self._metadata)
             except FileNotFoundError:
                 logging.error('The provided file was not found')
         elif isinstance(vals, dict):
-            self._metadata=vals
+            self._metadata = vals
             if check_nested_dicts(self._metadata):
                 self._metadata = flatten_dict(self._metadata)
         else:
@@ -99,11 +101,11 @@ class DeviceCardano(Device):
         message: core.Message
             Message object containing the necessary information for
             its processing.
-        
+
         Returns
         -------
         main: dict
-            Information containing the results of the command 
+            Information containing the results of the command
             passed down through the message.
         """
         try:
@@ -113,7 +115,7 @@ class DeviceCardano(Device):
             print('Invalid Message Object')
         main = {'client_id': message.client_id}
         cmd = message.message['cmd'].upper()
-        func = [f for funcs in self._functions_list \
+        func = [f for funcs in self._functions_list
                 for n, f in funcs.items() if n == cmd][0]
         if not func:
             raise ValueError("The command does not exists")

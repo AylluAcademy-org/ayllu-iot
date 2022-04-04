@@ -3,17 +3,18 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 
+
 @dataclass()
 class Message:
     """
-    Class for the data of messages 
-    being pass down to devices objects
+    Class for the data of messages being pass down to devices objects
     """
-    
+
     # Implement sort_index
     client_id: str
     message: dict
     timestamp: datetime = datetime.now()
+
 
 class Device(ABC):
     """
@@ -43,17 +44,16 @@ class Device(ABC):
     @abstractmethod
     def metadata(self):
         """
-        Information to be used by object configurations or other 
-        methods
+        Information to be used by object configurations or other methods
         """
         pass
 
     @classmethod
     @abstractmethod
     def message_treatment(self,
-                        client_id):
+                          client_id):
         """
-        Main function that receives the object from the pubsub and 
+        Main function that receives the object from the pubsub and
         defines which function to call and execute
         """
         pass
@@ -62,15 +62,13 @@ class Device(ABC):
     def validate_message(message: Message) \
             -> Optional[AssertionError]:
         """
-        Validate if each inputed message is an object of class 
-        Message
+        Validate if each inputed message is an object of class Message
 
         Parameters
         ----------
         message: iot.core.Message
-            Message object with enough information for its 
-            operation
-        
+            Message object with enough information for its operation
+
         Returns
         ------
         result: Optional[AssertionError]
@@ -84,7 +82,7 @@ class Device(ABC):
     @staticmethod
     def validate_inputs(inputs) -> Optional[AssertionError]:
         """
-        Validate the inputs from a Message being passed down to the 
+        Validate the inputs from a Message being passed down to the
         function call
 
         Parameters

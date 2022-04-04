@@ -1,10 +1,9 @@
-"""
-"""
 # General imports
 import json
 # Package imports
 from src.iot.devices import DeviceCardano
 from src.cardano.utils import parse_inputs
+
 
 def basic_math(*args, **kwargs) -> list:
     """
@@ -18,30 +17,34 @@ def basic_math(*args, **kwargs) -> list:
     a = 2 + 2
     b = 2 * 2
     c = 2 ** 2
-    
+
     if return_list:
         return [a, b, c]
     else:
         return (a, b, c)
+
 
 def basic_dict() -> dict:
     """
     """
     return {'status': 'successful'}
 
+
 def basic_json(input_dict: dict):
     """
     """
     return json.dumps(input_dict)
 
+
 TestDeviceCardanoFunctionsOne = {
     'BASIC_MATH': basic_math
-    }
+}
 
 TestDeviceCardanoFunctionsTwo = {
     'BASIC_DICT': basic_dict,
     'BASIC_JSON': basic_json
-    }
+}
+
 
 class TestDeviceCardano(DeviceCardano):
     """
@@ -68,6 +71,6 @@ class TestDeviceCardano(DeviceCardano):
         device_id: str
             Unique identifier for the device.
         """
-        super().__init__(id=device_id, \
-                            functions=[TestDeviceCardanoFunctionsOne, \
-                                        TestDeviceCardanoFunctionsTwo])
+        super().__init__(id=device_id,
+                         functions=[TestDeviceCardanoFunctionsOne,
+                                    TestDeviceCardanoFunctionsTwo])

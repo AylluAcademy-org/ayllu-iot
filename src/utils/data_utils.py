@@ -4,10 +4,12 @@ def check_nested_dicts(vals: dict):
     else:
         return False
 
+
 def flatten_dict(d, parent_key='', sep=''):
     """
     Credits to:
-    stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys#6027615
+    stackoverflow.com
+    /questions/6027558/flatten-nested-dictionaries-compressing-keys#6027615
     """
     items = []
     for k, v in d.items():
