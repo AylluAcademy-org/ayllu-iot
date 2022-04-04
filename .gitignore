@@ -5,6 +5,9 @@ __pycache__
 .cache
 .pytest_cache/
 
+# Build
+*.egg-info
+
 # pyenv
 .python-version
 
@@ -21,6 +24,9 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# tox
+.tox
 
 # vscode
 .vscode/
