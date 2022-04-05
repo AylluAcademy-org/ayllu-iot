@@ -6,6 +6,30 @@ on:
       - main
       - dev
 
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'testing' 
+        type: choice
+        options:
+        - testing
+        - warning
+        - debug
+      tags:
+        description: 'Workflow execution tags'
+        required: true 
+        type: string
+      branch:
+        description: 'Execution Branch'
+        required: true
+        default: 'dev'
+        type: string
+
+env:
+  BRANCH: ${{ github.event.inputs.branch }} || ${{ github.event.base_ref }}
+      
 jobs:
   testing:
     name: Tox Testing Pipeline
@@ -13,10 +37,11 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9']
-      
     steps:
     - name: Set working branch
       uses: actions/checkout@v3
+      with:
+        ref: ${{ env.BRANCH }}
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -27,3 +52,5 @@ jobs:
         pip install tox tox-gh-actions
     - name: Test with tox
       run: tox
+
+  
