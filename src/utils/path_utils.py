@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+
 def get_root_path() -> str:
     """
     Set working directory for project
@@ -20,7 +21,8 @@ def get_root_path() -> str:
             break
     return root_path + root_dir_name
 
-def set_working_path(target: list=[]) -> None:
+
+def set_working_path(target: list = []) -> None:
     """
     """
     working_dir = get_root_path()

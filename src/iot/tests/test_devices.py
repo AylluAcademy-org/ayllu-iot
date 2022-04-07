@@ -1,16 +1,18 @@
 # General imports
 import json
 # Package imports
-from src.utils.path_utils import get_root_path
 from src.utils.test_utils import load_cardano_configs
 from src.iot import core
 from src.iot.tests.extended_devices import TestDeviceCardano
 
+
 def create_message(cmd):
     return core.Message(client_id='1', message=cmd)
 
+
 def create_device_cardano():
     return TestDeviceCardano('T')
+
 
 def dc_metadata_assertions(configs_dict: dict, dc_object: TestDeviceCardano):
     """
@@ -29,6 +31,7 @@ def dc_metadata_assertions(configs_dict: dict, dc_object: TestDeviceCardano):
     assert dc_object.metadata['KEYS_FILE_PATH'] == KEYS_FILE_PATH
     assert dc_object.metadata['URL'] == URL
 
+
 def test_dc_metadata():
     """
     """
@@ -46,6 +49,7 @@ def test_dc_metadata():
     dc_metadata_assertions(configs, node_1)
     dc_metadata_assertions(configs, node_2)
 
+
 def test_message_treatment():
     """
     """
@@ -53,9 +57,9 @@ def test_message_treatment():
 
     # msg_1 = create_message('not_a_dict') # raise AssertionError
     # msg_2 = create_message({'cmd': 'not_a_cmd'}) # raise ValueError
-    msg_3 = create_message({'cmd': 'basic_math', 'args': \
+    msg_3 = create_message({'cmd': 'basic_math', 'args':
                             {'return_list': True}})
-    msg_4 = create_message({'cmd': 'basic_math', 'args': \
+    msg_4 = create_message({'cmd': 'basic_math', 'args':
                             json.dumps({'return_list': False})})
     msg_5 = create_message({'cmd': 'basic_dict', 'args': {}})
 
@@ -73,8 +77,8 @@ def test_message_treatment():
     output_4 = node.message_treatment(msg_4)
     output_5 = node.message_treatment(msg_5)
 
-    basic_math_result = {'client_id': '1', 'output_0': 4, \
-                    'output_1': 4, 'output_2': 4}
+    basic_math_result = {'client_id': '1', 'output_0': 4,
+                         'output_1': 4, 'output_2': 4}
 
     assert output_3 == basic_math_result
     assert output_4 == basic_math_result
