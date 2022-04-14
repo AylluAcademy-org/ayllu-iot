@@ -21,11 +21,18 @@ def get_root_path() -> str:
     """
     root_dir_name = 'CardanoPython'
     root_path = ''
-    for t_dir in str(Path(__file__)).split('/'):
-        if t_dir != root_dir_name:
-            root_path += t_dir + '/'
+    path_list = str(Path(__file__)).split('/')
+    index = 0
+    for d in path_list:
+        if d != root_dir_name:
+            root_path += d + '/'
+            index += 1
         else:
-            break
+            if (path_list[index + 1] == root_dir_name):
+                root_path += d + '/'
+                break
+            else:
+                break
     return root_path + root_dir_name
 
 
