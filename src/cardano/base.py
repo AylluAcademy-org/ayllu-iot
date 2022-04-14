@@ -49,9 +49,9 @@ class Cardano:
 
 class Node(Cardano):
 
-"""
-Class using primarly Cardano CLI commands
-"""
+    """
+    Class using primarly Cardano CLI commands
+    """
 
     def __init__(self, config_path=cardano_configs):
         super().__init__(config_path=config_path)
@@ -633,25 +633,6 @@ class Wallet(Cardano):
         wallets_info = requests.get(request_status_url)
         return wallets_info.json()
 
-    def generate_mnemonic(self, size=24, *args, **kwargs):
-        """Create mnemonic sentence (list of mnemonic words)
-        Input: size number of words: 24 by default"""
-        try:
-            size = utils.parse_inputs(
-                ['size'], args, kwargs) if size != 24 else size
-            print('Executing Generate New Mnemonic Phrase')
-            # Generate mnemonic
-            command_string = [
-                'cardano-wallet', 'recovery-phrase', 'generate',
-                '--size', str(size)
-            ]
-            mnemonic = subprocess.check_output(command_string)
-            mnemonic = mnemonic.decode('utf-8')
-            mnemonic = mnemonic.split()
-            return mnemonic
-        except OSError as e:
-            print("Execution failed:", e, file=sys.stderr)
-
     def create_wallet(self, name, passphrase, mnemonic):
         """Create or restore wallet
         Inputs: name, passphrase and mnemonic sentence
@@ -784,6 +765,25 @@ class Keys(Cardano):
         self.cardano_network = self.CARDANO_NETWORK
         self.cardano_network_magic = self.CARDANO_NETWORK_MAGIC
     
+
+    def generate_mnemonic(self, size=24, *args, **kwargs):
+        """Create mnemonic sentence (list of mnemonic words)
+        Input: size number of words: 24 by default"""
+        try:
+            size = utils.parse_inputs(
+                ['size'], args, kwargs) if size != 24 else size
+            print('Executing Generate New Mnemonic Phrase')
+            # Generate mnemonic
+            command_string = [
+                'cardano-wallet', 'recovery-phrase', 'generate',
+                '--size', str(size)
+            ]
+            mnemonic = subprocess.check_output(command_string)
+            mnemonic = mnemonic.decode('utf-8')
+            mnemonic = mnemonic.split()
+            return mnemonic
+        except OSError as e:
+            print("Execution failed:", e, file=sys.stderr)
 
     def deriveRootKey(self, mnemonic):
         """Generate root key
@@ -965,7 +965,7 @@ class Keys(Cardano):
         except OSError as e:
             print("Execution failed:", e, file=sys.stderr)
 
-    def convertPaymentKey(self, payment_signing_key):
+    def convertPaymentKey(self, payment_signing_key, name):
         """This function converts the cardano wallet payment keys to 
         cardano-cli payment keys
 
@@ -984,50 +984,51 @@ class Keys(Cardano):
             command_string = [
             'cardano-cli', 'key', 'convert-cardano-address-key',
             '--shelley-payment-key', '--signing-key-file',
-            self.path + '/temp_payment.xsk', '--out-file', self.path + '/temp_payment.skey']
+            self.path + '/temp_payment.xsk', '--out-file', self.path + '/' + name + '/' + name + '.payment.skey']
             subprocess.run(command_string)
-            output = utils.cat_files(self.path, '/temp_payment.skey')
+            output = utils.cat_files(self.path, '/' + name + '/' + name + '.payment.skey')
             payment_skey = output.communicate()[0].decode('utf-8')
             output.stdout.close()
-            # Delete file root key
-            utils.remove_files(self.path, '/temp_payment.xsk')
 
             # Get verification payment key from signing payment key.
             command_string = [
             'cardano-cli', 'key', 'verification-key', '--signing-key-file',
-            self.path + '/temp_payment.skey',
-            '--verification-key-file', self.path + '/temp_payment.evkey'
+            self.path + '/' + name + '/' + name + '.payment.skey',
+            '--verification-key-file', self.path + '/' + name + '/' + name + '.payment.evkey'
             ]
             subprocess.run(command_string)
 
             # Get non-extended verification payment key from extended verification payment key.
             command_string = [
                 'cardano-cli', 'key', 'non-extended-key',
-                '--extended-verification-key-file', self.path + '/temp_payment.evkey',
-                '--verification-key-file', self.path + '/temp_payment.vkey'
+                '--extended-verification-key-file', self.path + '/' + name + '/' + name + '.payment.evkey',
+                '--verification-key-file', self.path + '/' + name + '/' + name + '.payment.vkey'
             ]
             subprocess.run(command_string)
-            output = utils.cat_files(self.path, '/temp_payment.vkey')
+            output = utils.cat_files(self.path, '/' + name + '/' + name + '.payment.vkey')
             payment_vkey = output.communicate()[0].decode('utf-8')
             output.stdout.close()
 
             # Build payment addresses
             command_string = [
             'cardano-cli', 'address', 'build',
-            '--payment-verification-key-file', self.path + '/temp_payment.vkey',
+            '--payment-verification-key-file', self.path + '/' + name + '/' + name + '.payment.vkey',
             '--testnet-magic', str(self.cardano_network_magic), '--out-file',
-            self.path + '/temp_payment.addr'
+            self.path + '/' + name + '/' + name + '.payment.addr'
             ]
             subprocess.run(command_string)
-            output = utils.cat_files(self.path, '/temp_payment.addr')
+            output = utils.cat_files(self.path, '/' + name + '/' + name + '.payment.addr')
             payment_addr = output.communicate()[0].decode('utf-8')
             output.stdout.close()
+
+            # Delete files
+            utils.remove_files(self.path, '/temp_payment.xsk')
 
             return payment_skey, payment_vkey, payment_addr
         except OSError as e:
             print("Execution failed:", e, file=sys.stderr)
 
-    def convertStakeSigningKey(self, stake_signing_key):
+    def convertStakeSigningKey(self, stake_signing_key, name):
         """This function converts the cardano wallet stake keys to 
         cardano-cli stake keys
 
@@ -1046,50 +1047,51 @@ class Keys(Cardano):
             command_string = [
             'cardano-cli', 'key', 'convert-cardano-address-key',
             '--shelley-stake-key', '--signing-key-file',
-            self.path + '/temp_stake.xsk', '--out-file', self.path + '/temp_stake.skey']
+            self.path + '/temp_stake.xsk', '--out-file', self.path + '/' + name + '/' + name + '.stake.skey']
             subprocess.run(command_string)
-            output = utils.cat_files(self.path, '/temp_stake.skey')
+            output = utils.cat_files(self.path, '/' + name + '/' + name + '.stake.skey')
             stake_skey = output.communicate()[0].decode('utf-8')
             output.stdout.close()
-            # Delete file root key
-            utils.remove_files(self.path, '/temp_stake.xsk')
 
              # Get verification stake key from signing stake key.
             command_string = [
             'cardano-cli', 'key', 'verification-key', '--signing-key-file',
-            self.path + '/temp_stake.skey',
-            '--verification-key-file', self.path + '/temp_stake.evkey'
+            self.path + '/' + name + '/' + name + '.stake.skey',
+            '--verification-key-file', self.path + '/' + name + '/' + name + '.stake.evkey'
             ]
             subprocess.run(command_string)
 
             # Get non-extended verification stake key from extended verification stake key.
             command_string = [
                 'cardano-cli', 'key', 'non-extended-key',
-                '--extended-verification-key-file', self.path + '/temp_stake.evkey',
-                '--verification-key-file', self.path + '/temp_stake.vkey'
+                '--extended-verification-key-file', self.path + '/' + name + '/' + name + '.stake.evkey',
+                '--verification-key-file', self.path + '/' + name + '/' + name + '.stake.vkey'
             ]
             subprocess.run(command_string)
-            output = utils.cat_files(self.path, '/temp_stake.vkey')
+            output = utils.cat_files(self.path, '/' + name + '/' + name + '.stake.vkey')
             stake_vkey = output.communicate()[0].decode('utf-8')
             output.stdout.close()
 
             # Build stake addresses
             command_string = [
             'cardano-cli', 'stake-address', 'build',
-            '--stake-verification-key-file', self.path + '/temp_stake.vkey',
+            '--stake-verification-key-file', self.path + '/' + name + '/' + name + '.stake.vkey',
             '--testnet-magic', str(self.cardano_network_magic), '--out-file',
-            self.path + '/temp_stake.addr'
+            self.path + '/' + name + '/' + name + '.stake.addr'
             ]
             subprocess.run(command_string)
-            output = utils.cat_files(self.path, '/temp_stake.addr')
+            output = utils.cat_files(self.path, '/' + name + '/' + name + '.stake.addr')
             stake_addr = output.communicate()[0].decode('utf-8')
+            # Delete file
+            utils.remove_files(self.path, '/temp_stake.xsk')
+
             output.stdout.close()
 
             return stake_skey, stake_vkey, stake_addr
         except OSError as e:
             print("Execution failed:", e, file=sys.stderr)
 
-    def deriveBaseAddress(self,payment_vkey,stake_vkey):
+    def deriveBaseAddress(self,payment_vkey,stake_vkey, name):
         """Derive the base address Cardano cli command
 
         Args:
@@ -1100,22 +1102,153 @@ class Keys(Cardano):
             [str]: [Combined base address]
         """
         try:
+            # Save temp root_key
+            utils.save_files(self.path, '/temp_payment.vkey', str(payment_vkey))
+            utils.save_files(self.path, '/temp_stake.vkey', str(stake_vkey))
+
             # Build base addresses
             command_string = [
             'cardano-cli', 'address', 'build',
             '--payment-verification-key-file', self.path + '/temp_payment.vkey',
             '--stake-verification-key-file', self.path + '/temp_stake.vkey',
             '--testnet-magic', str(self.cardano_network_magic), '--out-file',
-            self.path + '/temp_base.addr'
+            self.path + '/' + name + '/' + name + '.base.addr'
             ]
             subprocess.run(command_string)
-            output = utils.cat_files(self.path, '/temp_base.addr')
+            output = utils.cat_files(self.path, '/' + name + '/' + name + '.base.addr')
             base_addr = output.communicate()[0].decode('utf-8')
             output.stdout.close()
+            utils.remove_files(self.path, '/temp_payment.vkey')
+            utils.remove_files(self.path, '/temp_stake.vkey')
             return base_addr
         except OSError as e:
             print("Execution failed:", e, file=sys.stderr)
 
+    def keyHashing(self, payment_vkey):
+
+        try:
+
+            # Save temp root_key
+            utils.save_files(self.path, '/temp_payment.vkey', str(payment_vkey))
+            # Build hash from key
+            command_string = [
+            'cardano-cli', 'address', 'key-hash',
+            '--payment-verification-key-file', self.path + '/temp_payment.vkey'
+            ]
+
+            output = subprocess.check_output(command_string)
+            key_hash = str(output.decode('utf-8').rstrip())
+            utils.remove_files(self.path, '/temp_payment.vkey')
+            return key_hash
+        except OSError as e:
+            print("Execution failed:", e, file=sys.stderr)
+
+    def deriveAllKeys(self, size, name):
+
+        """This function creates all the keys and addresses and save them
+        in root_folder/priv/wallet/walletname path
+
+
+        Args:
+            size ([int]): [phrase extension: 24, 15, etc]
+            name ([str]): [name of the wallet to save the keys]
+        """ 
+        if not os.path.exists(self.path + '/' + name):
+            os.makedirs(self.path + '/' + name)
+        nmemonic = self.generate_mnemonic(size)
+        root_key = self.deriveRootKey(nmemonic)
+        stake = self.deriveExtendedSigningStakeKey(root_key)
+        payment = self.deriveExtendedSigningPaymentKey(root_key)
+
+        payment_public_account_key = self.deriveExtendedVerificationPaymentKey(payment)
+        stake_public_account_key = self.deriveExtendedVerificationStakeKey(stake)
+
+        payment_address = self.derivePaymentAddress(payment_public_account_key)
+
+
+        # Convert from cardano wallet keys to cardano-cli keys
+        """ 
+        Convert payment signing keys
+        """
+        payment_skey, payment_vkey, payment_addr = self.convertPaymentKey(payment, name)
+        """
+        Convert stake signing keys
+        """
+        stake_skey, stake_vkey, stake_addr = self.convertStakeSigningKey(stake, name)
+        base_addr = self.deriveBaseAddress(payment_vkey ,stake_vkey, name)
+
+        # Hashing the verification keys
+        
+        hash_verification_key = self.keyHashing(payment_vkey)
+
+        # Building the paths
+        payment_skey_path = self.path + '/' + name + '/' + name + '.payment.skey'
+        payment_vkey_path = self.path + '/' + name + '/' + name + '.payment.vkey'
+        payment_addr_path = self.path + '/' + name + '/' + name + '.payment.addr'
+        stake_skey_path = self.path + '/' + name + '/' + name + '.stake.skey'
+        stake_vkey_path = self.path + '/' + name + '/' + name + '.stake.vkey'
+        stake_addr_path = self.path + '/' + name + '/' + name + '.stake.addr'
+
+        # Creating the dict
+        keys = {
+            'mnemonic': nmemonic,
+            'root_key': root_key,
+            'private_stake_key': stake,
+            'private_payment_key': payment,
+            'payment_account_key': payment_public_account_key,
+            'stake_account_key': stake_public_account_key,
+            'payment_addr': payment_address,
+            'payment_addr_path': payment_addr_path,
+            'payment_skey_path': payment_skey_path,
+            'payment_vkey_path': payment_vkey_path,
+            'stake_skey_path': stake_skey_path,
+            'stake_vkey_path': stake_vkey_path,
+            'stake_addr_path': stake_addr_path,
+            'base_addr_path':base_addr,
+            'hash_verification_key': hash_verification_key,
+        }
+
+        with open(self.path + '/' + name + '/' + name + '.json', 'w') as file:
+            json.dump(keys, file, indent=4, ensure_ascii=False)
+
+        # # Section to save all the keys and addresses in local files
+        # utils.save_files(self.path + '/' + name + '/', name + '.mnemonic', str(nmemonic))
+        # utils.save_files(self.path + '/' + name + '/', name + '.root.prv', root_key)
+        # utils.save_files(self.path + '/' + name + '/', name + '.stake.xprv', stake)
+        # utils.save_files(self.path + '/' + name + '/', name + '.payment.xprv', payment)
+        # utils.save_files(self.path + '/' + name + '/', name + '.payment.xpub', payment_public_account_key)
+        # utils.save_files(self.path + '/' + name + '/', name + '.stake.xpub', stake_public_account_key)
+        # utils.save_files(self.path + '/' + name + '/', name + '.paymentext.addr', payment_address)
+        # utils.save_files(self.path + '/' + name + '/', name + '.payment.skey', payment_skey)
+        # utils.save_files(self.path + '/' + name + '/', name + '.payment.vkey', payment_vkey)
+        # utils.save_files(self.path + '/' + name + '/', name + '.payment.addr', payment_addr)
+        # utils.save_files(self.path + '/' + name + '/', name + '.stake.skey', stake_skey)
+        # utils.save_files(self.path + '/' + name + '/', name + '.stake.vkey', stake_vkey)
+        # utils.save_files(self.path + '/' + name + '/', name + '.stake.addr', stake_addr)
+        # utils.save_files(self.path + '/' + name + '/', name + '.base.addr', base_addr)
+
+        return keys
+
+    def generateCardanoKeys(self, folder_path, name):
+        if folder_path == '':
+            pathName = self.path + '/' + name
+        else:
+            pathName = folder_path + '/' + name
+        
+        if not os.path.exists(pathName):
+            os.makedirs(pathName)
+        # Build Cardano keys with Cardano CLI
+        command_string = [
+        'cardano-cli', 'address', 'key-gen',
+        '--verification-key-file', pathName + '/' + name + '.vkey',
+        '--signing-key-file', pathName + '/' + name + '.skey'
+        ]
+
+        output = subprocess.run(command_string)
+        if output.returncode != 0:
+            print(output.stderr)
+            raise Exception("Unknown error generating cardano keys")
+        
 class IotExtensions(Node, Wallet):
     def __init__(self, config_path=cardano_configs):
         super().__init__(config_path=config_path)
