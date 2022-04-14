@@ -14,11 +14,18 @@ def get_root_path() -> str:
     """
     root_dir_name = 'CardanoPython'
     root_path = ''
-    for d in str(Path(__file__)).split('/'):
+    path_list = str(Path(__file__)).split('/')
+    index = 0
+    for d in path_list:
         if d != root_dir_name:
             root_path += d + '/'
+            index += 1
         else:
-            break
+            if (path_list[index + 1] == root_dir_name):
+                root_path += d + '/'
+                break
+            else:
+                break
     return root_path + root_dir_name
 
 
