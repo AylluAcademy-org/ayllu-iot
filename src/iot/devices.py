@@ -31,7 +31,7 @@ class DeviceCardano(Device):
         Should contain only Enums such as in `scr.iot.commands`
     """
 
-    from src.iot.commands import WalletFunctions, NodeFunctions, \
+    from src.iot.commands import CardanoFunctions, Keysfunctions, WalletFunctions, NodeFunctions, \
         IotExtensionFunctions
     # To-do: Only import if not loaded
     device_id: str

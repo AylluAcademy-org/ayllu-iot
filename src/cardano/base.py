@@ -386,7 +386,7 @@ class Node(Cardano):
             _type_: policyID, policy_script
         """
         print('Executing Creation of Minting Policy')
-        # wallet_id = utils.parse_inputs(['wallet_id'], args, kwargs)
+        # wallet_id = utils.parse_inputs(['hash'], args, kwargs)
         path = self.KEYS_FILE_PATH + '/' + wallet_id + '/' + 'minting/'
         # if not os.path.exists(path):
         #     os.makedirs(path)
