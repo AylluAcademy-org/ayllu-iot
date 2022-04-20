@@ -30,3 +30,6 @@ dmypy.json
 
 # vscode
 .vscode/
+
+#Others
+priv/
