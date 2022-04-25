@@ -7,21 +7,24 @@ import json
 # Package imports
 from src.utils.path_utils import get_root_path
 
-working_dir = get_root_path()
-cardano_configs = f'{working_dir}/config/cardano_config.json'
+# working_dir = get_root_path()
+# cardano_configs = f'{working_dir}/config/cardano_config.json'
 
-with open(cardano_configs) as file:
-    params = json.load(file)
-keys_file_path = params['node']['KEYS_FILE_PATH']
-if not os.path.exists(keys_file_path):
-    os.makedirs(keys_file_path)
+# with open(cardano_configs) as file:
+#     params = json.load(file)
+# keys_file_path = params['node']['KEYS_FILE_PATH']
+# if not os.path.exists(keys_file_path):
+#     os.makedirs(keys_file_path)
 
+def create_folder(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 def save_files(path, name, content):
     if not os.path.exists(path):
         os.makedirs(path)
     with open(path + name, 'w') as file:
-        file.write(content)
+        file.write(str(content))
 
 
 def cat_files(path, name):
@@ -40,13 +43,13 @@ def remove_files(path, name):
     # shutil.rmtree(path+name)
 
 
-def save_metadata(path, metadata):
+def save_metadata1(path, name, metadata):
     if metadata == {}:
         metadata_json_file = ''
     else:
-        with open(path + '/' + 'metadata.json', 'w') as file:
+        with open(path + '/' + name, 'w') as file:
             json.dump(metadata, file, indent=4, ensure_ascii=False)
-        metadata_json_file = path + '/' + 'metadata.json'
+        metadata_json_file = path + '/' + name
 
     return metadata_json_file
 
