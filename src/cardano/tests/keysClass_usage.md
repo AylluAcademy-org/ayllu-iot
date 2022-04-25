@@ -49,9 +49,9 @@ Above code will return something similar to this:
     Find all the keys and address details in: ./priv/wallets/wallet01/wallet01.json
     ##################################
 
-All the keys will be store at './priv/wallets/<name_provided>
+All keys will be store at './priv/wallets/<name_provided>
 
-You can take a backup and delete the folder. Store your keys in a private location. This library does not keep any log or backup.
+You can take a backup and delete the folder. Store your keys in a private location. The script does not keep any log or backup.
 
 > :warning: **Warning:** Your nmenomics are the most important piece of information and the ultimate way of recovering your keys.
 
@@ -75,7 +75,12 @@ The steps are:
     3. Create the script file
     4. Build the script address
     5. Lock funds the script address
-    6. Unlock funds from the script address
+    6. Confirm the reception of the ADA by querying the script address
+    7. Build transaction to send funds from script address to any address
+    8. Witness and sign the transaction with at least 2 signing keys
+    9. Submit the transaction
+
+Steps 1, 2, 3 and 4 can be done with the following code
 
 ```python
 from src.cardano.base import Keys
@@ -91,8 +96,84 @@ for name in wallet_names:
 
 type = "atLeast"
 required = 2
-multisig_script = key.create_multisig_script(name, type, required, keyHashes)
+ = '3multisig'
+multisig_script = key.create_multisig_script(scriptName, type, required, keyHashes)
 
-script_address = key.create_address_script(name)
+script_address = key.create_address_script(scriptName)
 print(script_address)
+```
+5. Lock funds to the script address. If in testnet, faucet can be used to lock some funds.
+
+6. Once ADA is sent to the script address, you can query the address to confirm the reception of the ADAs.
+
+```python
+from src.cardano.base import Node
+
+script_address = 'addr_test1wq9hxaynns7n349gdxwu375twnweqqy8vngnnhqhx43gutg6zls8t'
+
+transactions = node.get_transactions(wallet_id= script_address)
+print(transactions)
+balance = node.get_balance(script_address)
+print(balance)
+```
+The get transactions method from the Node class returns a json response with the address balance.
+
+7. Build transaction to send funds from script address to any address
+
+```python
+from src.cardano.base import Node
+script_address = 'addr_test1wq9hxaynns7n349gdxwu375twnweqqy8vngnnhqhx43gutg6zls8t'
+destin_address = 'addr_test1qzmuq5ymy58emta7lwzr4sgrpyp7679svq62ltltu9nsgla0yzn06hf399g6wmcqce90gxqujpzu7duaenk2t2vy3gjspdsx02'
+quantiy = 5000000
+change_address = script_address
+metadata = {}
+mint = {}
+script_path = './priv/wallets/3multisig/3multisig.script'
+witness = 2
+
+params = {
+  "message": {
+    "tx_info": {
+      "address_origin": [
+        script_address,
+        ],
+      "address_destin": [
+        {
+          "address": destin_address,
+          "amount": {
+                "quantity": quantity,
+                "unit": "lovelace"
+            },
+          "assets": {},
+        },
+      ],
+      "change_address": change_address,
+      "metadata": metadata,
+      "mint": mint,
+      "script_path": script_path,
+      "witness": witness,
+    }
+  }
+}
+node.build_tx_components(params)
+```
+The file is stored in ./priv/transactions/tx.draft
+
+8. Witness and sign the transaction with at least 2 signing keys
+
+```python
+from src.cardano.base import Node
+sign_wallets = ['wallet01', 'wallet03']
+for wallet_name in sign_wallets:
+  node.sign_witness(wallet_name)
+
+node.assemble_tx(sign_wallets)
+```
+The file is sotred in ./priv/transactions/tx.signed
+
+9. Submit the transaction
+
+```python
+from src.cardano.base import Node
+node.submit_transaction()
 ```

@@ -6,7 +6,7 @@ from decouple import config  # type: ignore
 import json
 
 # Package imports
-from src.utils.path_utils import get_root_path
+# from src.utils.path_utils import get_root_path
 
 # working_dir = get_root_path()
 # cardano_configs = f'{working_dir}/config/cardano_config.json'
@@ -17,9 +17,11 @@ from src.utils.path_utils import get_root_path
 # if not os.path.exists(keys_file_path):
 #     os.makedirs(keys_file_path)
 
+
 def create_folder(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
 
 def save_files(path, name, content):
     if not os.path.exists(path):
@@ -44,15 +46,20 @@ def remove_files(path, name):
     # shutil.rmtree(path+name)
 
 
-def save_metadata1(path, name, metadata):
-    if metadata == {}:
-        metadata_json_file = ''
-    else:
-        with open(path + '/' + name, 'w') as file:
-            json.dump(metadata, file, indent=4, ensure_ascii=False)
-        metadata_json_file = path + '/' + name
+def save_metadata(path, name, metadata):
+    try:
+        if metadata == {}:
+            metadata_json_file = ''
+        else:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            with open(path + '/' + name, 'w') as file:
+                json.dump(metadata, file, indent=4, ensure_ascii=False)
+            metadata_json_file = path + '/' + name
 
-    return metadata_json_file
+        return metadata_json_file
+    except:
+        raise TypeError()
 
 
 def towallet(wallet_id, mnemonic):
