@@ -3,7 +3,14 @@ from src.cardano.base import Keys, Node
 key = Keys()
 node = Node()
 
-# keys1 = key.deriveAllKeys(24, 'test03')
+tx_id = node.get_txid()
+print(tx_id)
+result = node.query_protocol()
+print(result)
+result = node.query_tip_exec()
+print(result)
+
+keys1 = key.deriveAllKeys(24, 'temp')
 
 # key.generateCardanoKeys('policy')
 # name = 'policy'
@@ -30,19 +37,19 @@ wallet_names = ['wallet01', 'wallet02', 'wallet03']
 
 # type = "atLeast"
 # required = 2
-# scriptName = '3multisig'
+scriptName = '3multisig'
 # multisig_script = key.create_multisig_script(scriptName, type, required, keyHashes)
 
-# script_address = key.create_address_script(scriptName)
-# print(script_address)
+script_address = key.create_address_script(scriptName)
+print(script_address)
 witness = 2
-script_address = 'addr_test1wrsg430cfkehezut0r9yyl9y6d6vaa4dydkg2wy260ake8c2ft6hp'
+# script_address = 'addr_test1wrsg430cfkehezut0r9yyl9y6d6vaa4dydkg2wy260ake8c2ft6hp'
 # script_address = 'addr_test1wq9hxaynns7n349gdxwu375twnweqqy8vngnnhqhx43gutg6zls8t'
 
-# transactions = node.get_transactions(script_address)
-# print(transactions)
-# balance = node.get_balance(script_address)
-# print(balance)
+transactions = node.get_transactions(script_address)
+print(transactions)
+balance = node.get_balance(script_address)
+print(balance)
 
 #########
 # Build the components of the transaction
