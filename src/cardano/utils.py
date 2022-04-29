@@ -4,21 +4,23 @@ import subprocess
 from decouple import config  # type: ignore
 import json
 
-# Package imports
+# Module imports
 from src.utils.path_utils import get_root_path
 
-# working_dir = get_root_path()
-# cardano_configs = f'{working_dir}/config/cardano_config.json'
+working_dir = get_root_path()
+cardano_configs = f'{working_dir}/config/cardano_config.json'
 
-# with open(cardano_configs) as file:
-#     params = json.load(file)
-# keys_file_path = params['node']['KEYS_FILE_PATH']
-# if not os.path.exists(keys_file_path):
-#     os.makedirs(keys_file_path)
+with open(cardano_configs) as file:
+    params = json.load(file)
+keys_file_path = params['node']['KEYS_FILE_PATH']
+if not os.path.exists(keys_file_path):
+    os.makedirs(keys_file_path)
+
 
 def create_folder(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
 
 def save_files(path, name, content):
     if not os.path.exists(path):

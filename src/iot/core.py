@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,13 +12,13 @@ class Message:
 
     # Implement sort_index
     client_id: str
-    message: dict
+    payload: dict
     timestamp: datetime = datetime.now()
 
 
 class Device(ABC):
     """
-    Class to be implemented for IoT things devices depending on it's
+    Class to be implemented for IoT devices handlers depending on it's
     context target of operations
 
     Attributes
@@ -38,29 +38,24 @@ class Device(ABC):
         """
         Unique identifier for device object
         """
-        pass
 
     @property
     @abstractmethod
-    def metadata(self):
+    def metadata(self) -> dict:
         """
         Information to be used by object configurations or other methods
         """
-        pass
 
     @classmethod
     @abstractmethod
-    def message_treatment(self,
-                          client_id):
+    def message_treatment(self, client_id):
         """
         Main function that receives the object from the pubsub and
         defines which function to call and execute
         """
-        pass
 
     @staticmethod
-    def validate_message(message: Message) \
-            -> Optional[AssertionError]:
+    def validate_message(input_msg: Message) -> Optional[AssertionError]:
         """
         Validate if each inputed message is an object of class Message
 
@@ -74,10 +69,10 @@ class Device(ABC):
         result: Optional[AssertionError]
             Indicator wether the message is valid or not
         """
-        if isinstance(message, Message):
+        if isinstance(input_msg, Message):
             return None
         else:
-            return AssertionError("The message is not valid")
+            return AssertionError("The message is not of valid type")
 
     @staticmethod
     def validate_inputs(inputs) -> Optional[AssertionError]:
@@ -100,3 +95,48 @@ class Device(ABC):
         else:
             return AssertionError("The body of the message is not a \
                                 dictionary")
+
+
+class Thing(ABC):
+    """
+    Boilerplate for Thing implementation for different platforms.
+    """
+    connection: Any
+    _metadata: dict
+    _topic_queaue: dict
+    _handler: Device
+
+    @property
+    @abstractmethod
+    def metadata(self) -> dict:
+        """
+        Getter for metadata
+        """
+
+    @property
+    @abstractmethod
+    def topic_queue(self) -> dict:
+        """
+        Getter for topic_queue
+        """
+
+    @property
+    @abstractmethod
+    def handler(self) -> Device:
+        """
+        Getter for handler
+        """
+
+    @property
+    @abstractmethod
+    def _create_connection(self) -> Any:
+        """
+        Method to stablish connection with platform trough mqtt protocol
+        """
+
+    @property
+    @abstractmethod
+    def manage_messages(self):
+        """
+        Core function containing message treatment logic
+        """

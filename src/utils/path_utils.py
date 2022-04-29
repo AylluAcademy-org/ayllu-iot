@@ -5,6 +5,7 @@ Utils submodule related with path and files on system
 # General imports
 import sys
 import os
+import shutil
 import logging
 from pathlib import Path
 from typing import Union
@@ -45,7 +46,7 @@ def set_working_path(target_paths: Union[str, list] = None) -> None:
     ----------
     target_paths: Union[str, list], default=None
         Folder(s) and/or file(s) to be included in path.
-        When default, still appends root directory to path. 
+        When default, still appends root directory to path.
     """
     working_dir = get_root_path()
     if isinstance(list, target_paths):
@@ -59,6 +60,44 @@ def set_working_path(target_paths: Union[str, list] = None) -> None:
         sys.path.insert(0, working_dir)
 
 
+def join_paths(left_side: str, right_side: str):
+    """
+    Join to parts of a path
+    """
+    n_left = '/'.join(left_side.split('/')[:-1]) \
+        if left_side.split('/')[-1] == '' else left_side
+    n_right = '/'.join(right_side.split('/')[1:]) \
+        if right_side.split('/')[0] == '.' else right_side
+    return f"{n_left}/{n_right}"
+
+
+def validate_path(input_path: str, use_parent: bool = False) -> str:
+    """
+    Turn a relative path into an absolute one or returns one path that could
+    be left joined with a parent path
+    """
+    if use_parent:
+        if input_path.split('/')[0] == '.':
+            root_path = str(Path(__file__))
+            return f"{root_path}/{input_path}"
+        elif input_path.split('/')[0] == '..':
+            root_path = str(Path(__file__).parent)
+            return f"{root_path}/{input_path}"
+    else:
+        if input_path.split('/')[0] == '.' \
+                or input_path.split('/')[0] == '..':
+            return '/'.join(input_path.split('/')[1:])
+
+
+def only_folder_path(input_str: str) -> str:
+    """
+    Validate if an inputed path is a folder. If it is a file
+    it cuts it down to its parent
+    """
+    return input_str if len(input_str.split('/')[-1].split('.')) == 1\
+        else '/'.join(input_str.split('/')[:-1])
+
+
 def create_folder(target_path: Union[str, list]) -> None:
     """
     Creates a folder in the indicated path(s)
@@ -70,17 +109,19 @@ def create_folder(target_path: Union[str, list]) -> None:
     """
     if isinstance(target_path, list):
         for t_path in target_path:
-            if not os.path.exists(t_path):
-                os.makedirs(t_path)
-                logging.info("Folder created at `%s`", t_path)
+            only_folder = only_folder_path(t_path)
+            if not os.path.exists(only_folder):
+                os.makedirs(only_folder)
+                logging.info("Folder created at `%s`", only_folder)
             else:
-                logging.info("Folder `%s` already exists", t_path)
+                logging.info("Folder `%s` already exists", only_folder)
     else:
-        if not os.path.exists(target_path):
-            os.makedirs(target_path)
-            logging.info("Folder created at `%s`", target_path)
+        only_folder = only_folder_path(target_path)
+        if not os.path.exists(only_folder):
+            os.makedirs(only_folder)
+            logging.info("Folder created at `%s`", only_folder)
         else:
-            logging.info("Folder `%s` already exists", target_path)
+            logging.info("Folder `%s` already exists", only_folder)
 
 
 def remove_folder(target_path: Union[str, list]) -> None:
@@ -94,14 +135,26 @@ def remove_folder(target_path: Union[str, list]) -> None:
     """
     if isinstance(target_path, list):
         for t_path in target_path:
-            if os.path.exists(t_path):
-                os.remove(t_path)
-                logging.info("Folder removed at %s", t_path)
+            only_folder = only_folder_path(t_path)
+            if os.path.exists(only_folder):
+                shutil.rmtree(only_folder)
+                logging.info("Folder removed at %s", only_folder)
             else:
-                logging.info("Folder %s did not exists", t_path)
+                logging.info("Folder %s did not exists", only_folder)
     else:
-        if os.path.exists(target_path):
-            os.remove(target_path)
-            logging.info("Folder removed at %s", target_path)
+        only_folder = only_folder_path(target_path)
+        if os.path.exists(only_folder):
+            shutil.rmtree(only_folder)
+            logging.info("Folder removed at %s", only_folder)
         else:
-            logging.info("Folder %s did not exists", target_path)
+            logging.info("Folder %s did not exists", only_folder)
+
+
+def file_exists(target_path: Union[str, list]) -> Union[bool, list]:
+    """
+    Verify wether a file exists or not
+    """
+    if isinstance(target_path, str):
+        return os.path.exists(target_path)
+    else:
+        return [os.path.exists(p) for p in target_path]

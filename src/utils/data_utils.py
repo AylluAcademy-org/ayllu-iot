@@ -1,6 +1,8 @@
 # General imports
+import logging
 from typing import Union
 import json
+
 
 def check_nested_dicts(vals: dict):
     """
@@ -26,6 +28,7 @@ def flatten_dict(d, parent_key='', sep=''):
         except AttributeError:
             items.append((nk, v))
     return dict(items)
+
 
 def validate_vars(keywords: list, input_vars: dict) -> list:
     """
@@ -80,3 +83,25 @@ def parse_inputs(keywords: list, *args, **kwargs):
             return output
     else:
         return validate_vars(keywords, kwargs)
+
+
+def load_configs(vals: Union[str, dict]):
+    """
+    Loads configuration files into a dictionary to be use for reading configs
+    """
+    if isinstance(vals, str):
+        try:
+            with open(vals) as file:
+                output = json.load(file)
+                if check_nested_dicts(output):
+                    output = flatten_dict(output)
+            return output
+        except FileNotFoundError:
+            logging.error('The provided file was not found')
+    elif isinstance(vals, dict):
+        output = vals
+        if check_nested_dicts(output):
+            output = flatten_dict(output)
+        return output
+    else:
+        logging.error('Not supported configuration\'s input')
