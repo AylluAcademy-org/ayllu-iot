@@ -1,9 +1,11 @@
 # General imports
 import sys
+import os
 import subprocess
 import asyncio.futures as futures
 from uuid import uuid4
 import json
+from dotenv import load_dotenv
 
 from abc import ABC
 from typing import Union
@@ -20,26 +22,27 @@ from src.iot.core import Message, Device, Thing
 working_dir = get_root_path()
 
 TARGET_FOLDERS = ['cert', 'key', 'root-ca']
+TARGET_AWS = ['AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_REGION']
+AWS_DEFAULTS = ['aws_access_key_id', 'aws_secret_access_key', 'region']
 
 
 class Callbacks(ABC):
     """
     Set of callbacks to be used in connection definitions
     """
-    connection: mqtt.Connection
+    _connection: mqtt.Connection
 
     @property
     def connection(self) -> mqtt.Connection:
         """
         Getter method for abstract class for connection attribute
         """
-        return self.connection
+        return self._connection
 
     @connection.setter
     def connection(self, new_connection: mqtt.Connection) -> None:
-        self.connection = new_connection
+        self._connection = new_connection
 
-    @classmethod
     def on_connection_resumed(self, return_code: mqtt.ConnectReturnCode,
                               session_present: bool, **kwargs) -> None:
         """
@@ -52,7 +55,7 @@ class Callbacks(ABC):
                 and not session_present):
             print("Session connection failed. \
                     Resubscribing to existing topics with new connection...")
-            resubscribe_future, _ = self.connection\
+            resubscribe_future, _ = self._connection\
                 .resubscribe_existing_topics()
             # Cannot synchronously wait for resubscribe result
             # because we're on the connection's event-loop thread,
@@ -76,7 +79,7 @@ class IotCore(Thing, Callbacks):
     """
     Thing object that manages the incoming traffic trough Device objects
     """
-    connection: mqtt.Connection
+    _connection: mqtt.Connection
     _metadata: dict
     _topic_queue: dict
     _handler: Device
@@ -90,6 +93,7 @@ class IotCore(Thing, Callbacks):
         Parameters
         ----------
         """
+        load_dotenv()
         configs = config_path if config_path != 'config/aws_config.json' \
             else f'{working_dir}/{config_path}'
         self._files_setup(configs)
@@ -98,7 +102,7 @@ class IotCore(Thing, Callbacks):
             super().__init__()
             self.connection = self._create_connection()
             self.topic_queue = {}
-            self.handler = handler_object
+            self._handler = handler_object
         else:
             raise TypeError("Provide a valid device handler")
 
@@ -113,27 +117,28 @@ class IotCore(Thing, Callbacks):
     def topic_queue(self) -> dict:
         return self._topic_queue
 
+    @topic_queue.setter
+    def topic_queue(self, new_topic):
+        self._topic_queaue = new_topic
+
     @property
     def handler(self) -> Device:
         return self._handler
 
-    @classmethod
     def get_client_id(self) -> str:
         """
         Function for logging purposes so not to expose metadata attribute
         """
-        return self._metadata['client_id']
+        return self.metadata['client_id']
 
-    @classmethod
     def get_topic(self) -> str:
         """
         Getter function for topic metadata
         """
         # To-do: Implement array for multiple topic initialization
-        return self._metadata['topic']
+        return self.metadata['topic']
 
-    def _create_connection(self, session_restart: bool = False) \
-            -> mqtt.Connection:
+    def _create_connection(self) -> mqtt.Connection:
         """
         Implementation of mqtt connection method
         """
@@ -142,19 +147,19 @@ class IotCore(Thing, Callbacks):
         client_bootstrap = io.ClientBootstrap(event_loop_group, default_host)
         proxy_options = None
         credentials_provider = auth.AwsCredentialsProvider\
-            .new_default_chain(client_bootstrap)
+            .new_static(access_key_id=self.metadata['AWS_KEY_ID'],
+                        secret_access_key=self.metadata['AWS_SECRET_KEY'])
         mqtt_connection = mqtt_connection_builder\
             .websockets_with_default_aws_signing(
-                endpoint=self.metadata['endpoint'],
+                endpoint=self.metadata['AWS_IOT_ENDPOINT'],
                 client_bootstrap=client_bootstrap,
-                region=self.metadata['signing_region'],
+                region=self.metadata['AWS_REGION'],
                 credentials_provider=credentials_provider,
                 http_proxy_options=proxy_options,
                 ca_filepath=self.metadata['root-ca'],
                 on_connection_resumed=self.on_connection_resumed,
                 client_id=self.metadata['client_id'],
-                clean_session=session_restart,
-                keep_alive_secs=30)
+                clean_session=True, keep_alive_secs=30)
         return mqtt_connection
 
     def _files_setup(self, vals: Union[str, dict]):
@@ -163,9 +168,40 @@ class IotCore(Thing, Callbacks):
             create_folder(self.metadata[f])
         self._download_certificates(self.metadata['root-ca'])
         if not all(b is True for b in file_exists([self.metadata['cert'],
-                                                   self.metadata['cert']])):
+                                                   self.metadata['key']])):
             raise FileExistsError("RSA Keys are not available at the indicated\
                                     path")
+        env_vars = ['AWS_IOT_ENDPOINT', 'AWS_IOT_PORT', 'AWS_IOT_UID',
+                    'AWS_REGION', 'AWS_KEY_ID', 'AWS_SECRET_KEY']
+        for var in env_vars:
+            try:
+                if os.environ[var] != '':
+                    self._metadata[var] = os.environ[var]
+            except KeyError:
+                continue
+        self._validate_aws_credentials()
+
+    def _validate_aws_credentials(self):
+        missing = []
+        for num, val in enumerate(TARGET_AWS):
+            if val not in self._metadata.keys():
+                try:
+                    self._metadata[val] = os.environ[AWS_DEFAULTS[num]]
+                except KeyError:
+                    missing.append(val)
+                    continue
+        if any([True for t in TARGET_AWS[:2] if t in missing]):
+            try:
+                f = open('~/.aws/credentials')
+                f.close()
+            except FileNotFoundError:
+                raise FileNotFoundError('Missing IAM Configs')
+        elif TARGET_AWS[-1] in missing:
+            try:
+                f = open('~/.aws/config')
+                f.close()
+            except FileNotFoundError:
+                raise FileNotFoundError('IoT Region is not set')
 
     @staticmethod
     def _download_certificates(output_path: str) -> None:
@@ -176,9 +212,8 @@ class IotCore(Thing, Callbacks):
             subprocess.run(f"curl {url_} > {verified_path}",
                            shell=True, check=True)
         else:
-            print("Certificate file already exists\n Skipping step...")
+            print("Certificate file already exists\t Skipping step...")
 
-    @classmethod
     def manage_messages(self, msg_topic: str, payload: json):
         """
         Method for managing incoming messages onto Thing object
@@ -229,15 +264,13 @@ class IotCore(Thing, Callbacks):
                                     qos=mqtt.QoS.AT_LEAST_ONCE)
         return True
 
-    @classmethod
     def start_logging(self, output_path: str = 'stderr') -> None:
         """
         Set logging for thing runtime
         """
-        io.init_logging(getattr(io.LogLevel, self.metadata['verbosity']),
-                        output_path)
+        no_logs = self.metadata['verbosity']['Info']
+        io.init_logging(getattr(io.LogLevel, no_logs), output_path)
 
-    @classmethod
     def topic_subscription(self) -> futures.Future.result:
         """
         Enable subscription for things service

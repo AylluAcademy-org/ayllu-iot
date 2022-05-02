@@ -46,7 +46,6 @@ class Device(ABC):
         Information to be used by object configurations or other methods
         """
 
-    @classmethod
     @abstractmethod
     def message_treatment(self, client_id):
         """
@@ -127,14 +126,12 @@ class Thing(ABC):
         Getter for handler
         """
 
-    @property
     @abstractmethod
     def _create_connection(self) -> Any:
         """
         Method to stablish connection with platform trough mqtt protocol
         """
 
-    @property
     @abstractmethod
     def manage_messages(self):
         """

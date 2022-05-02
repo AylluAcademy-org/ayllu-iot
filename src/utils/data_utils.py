@@ -1,6 +1,6 @@
 # General imports
 import logging
-from typing import Union
+from typing import Optional, Union
 import json
 
 
@@ -14,20 +14,20 @@ def check_nested_dicts(vals: dict):
         return False
 
 
-def flatten_dict(d, parent_key='', sep=''):
+def flatten_dict(input_dict):
     """
-    Credits to:
-    stackoverflow.com
-    /questions/6027558/flatten-nested-dictionaries-compressing-keys#6027615
+    Reduce dictionary to only one nested level
     """
-    items = []
-    for k, v in d.items():
-        nk = str(k) if parent_key else k
+    output = []
+    for key, val in input_dict.items():
         try:
-            items.extend(flatten_dict(v, nk, sep=sep).items())
+            if check_nested_dicts(val):
+                output.extend(flatten_dict(val).items())
+            else:
+                output.append((key, val))
         except AttributeError:
-            items.append((nk, v))
-    return dict(items)
+            output.append((key, val))
+    return dict(output)
 
 
 def validate_vars(keywords: list, input_vars: dict) -> list:
@@ -85,7 +85,7 @@ def parse_inputs(keywords: list, *args, **kwargs):
         return validate_vars(keywords, kwargs)
 
 
-def load_configs(vals: Union[str, dict]):
+def load_configs(vals: Union[str, dict]) -> Optional[dict]:
     """
     Loads configuration files into a dictionary to be use for reading configs
     """

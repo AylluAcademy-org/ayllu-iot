@@ -18,7 +18,7 @@ def run_iot() -> None:
 
     thing = IotCore(DeviceCardano)
 
-    print(f"Connected to device: {thing.get_client_id()}")
+    print(f"Device Created: {thing.get_client_id()}")
 
     thing.start_logging()
 
@@ -52,7 +52,3 @@ def run_iot() -> None:
     disconnect_future = thing.connection.disconnect()
     disconnect_future.result()
     print("Disconnected!")
-
-
-if __name__ == "__main__":
-    run_iot()
