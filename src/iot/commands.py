@@ -1,14 +1,8 @@
 # General imports
 from enum import Enum
 # Package imports
-from src.cardano.base import Wallet, Node, IotExtensions, Cardano, Keys
+from src.cardano.base import Wallet, Node, IotExtensions, Keys
 
-class CardanoFunctions(Enum):
-    """
-    Enum loaded with the functions for Cardano Class, paired with actionable
-    keywords that serve as commands for the IoT Service
-    """
-    pass
 
 class Keysfunctions(Enum):
     """
@@ -16,6 +10,7 @@ class Keysfunctions(Enum):
     keywords that serve as commands for the IoT Service
     """
     GENERATE_NEW_MNEMONIC_PHRASE = Keys.generate_mnemonic
+
 
 class WalletFunctions(Enum):
     """

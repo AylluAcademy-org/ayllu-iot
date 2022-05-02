@@ -25,6 +25,11 @@ RUN /bin/sh -c "git clone https://github.com/input-output-hk/cardano-node.git"  
     && bash $CNODE_HOME/scripts/cabal-build-all.sh -l  \
     && cabal install cardano-ping
 
+RUN /bin/sh -c "git clone https://github.com/input-output-hk/cardano-wallet.git"   \
+    && cd cardano-wallet   \
+    && git fetch --tags --all   && git pull   && git checkout master   \
+    && bash $CNODE_HOME/scripts/cabal-build-all.sh -l 
+
 RUN /bin/sh -c "mkdir /opt/scripts"
 
 COPY ./bin /opt/scripts
@@ -32,5 +37,8 @@ COPY ./bin /opt/scripts
 RUN /bin/sh -c "chmod u+x /opt/scripts/*.sh" \
     && sh /opt/scripts/folders_setup.sh \
     && /bin/sh -c  "/opt/scripts/testnet_configs.sh /opt/cardano/config"
+
+ENV PATH=/scripts:/root/.cabal/bin:/root/.ghcup/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    CARDANO_NODE_SOCKET_PATH=/opt/cardano/ipc/node.socket
 
 CMD ["bash"]

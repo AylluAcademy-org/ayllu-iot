@@ -1,10 +1,8 @@
 {
     "AWS_IOT": {
-        "endpoint": "a3t35frz37six-ats.iot.us-east-1.amazonaws.com",
-        "port": 8883,
-        "cert": "./certificates/Cardano_node.cert.pem",
-        "key": "./certificates/Cardano_node.private.key",
-        "root-ca": "./certificates/root-CA.crt",
+        "cert": "./.certificates/test_device.pem.crt",
+        "key": "./.certificates/test_device.private.key",
+        "root-ca": "./.certificates/root-CA.crt",
         "topic": "test/topic",
         "verbosity":{
             "NoLogs":"NoLogs",
@@ -14,8 +12,6 @@
             "Info":"Info",
             "Debug":"Debug",
             "Trace":"Trace"
-        },
-        "signing_region":"us-east-1",
-        "uid":"Thing1"
+        }
     }
 }

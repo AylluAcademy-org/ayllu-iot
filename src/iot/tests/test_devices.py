@@ -2,12 +2,12 @@
 import json
 # Package imports
 from src.utils.test_utils import load_cardano_configs
-from src.iot import core
+from src.iot.core import Message
 from src.iot.tests.extended_devices import TestDeviceCardano
 
 
 def create_message(cmd):
-    return core.Message(client_id='1', message=cmd)
+    return Message(client_id='1', payload=cmd)
 
 
 def create_device_cardano():
