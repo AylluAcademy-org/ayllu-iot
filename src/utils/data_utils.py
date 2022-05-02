@@ -14,19 +14,25 @@ def check_nested_dicts(vals: dict):
         return False
 
 
-def flatten_dict(input_dict):
+def flatten_dict(input_dict, deep: bool=False):
     """
     Reduce dictionary to only one nested level
     """
     output = []
     for key, val in input_dict.items():
-        try:
-            if check_nested_dicts(val):
+        if deep:
+            try:
                 output.extend(flatten_dict(val).items())
-            else:
+            except AttributeError:
                 output.append((key, val))
-        except AttributeError:
-            output.append((key, val))
+        else:
+            try:
+                if check_nested_dicts(val):
+                    output.extend(flatten_dict(val).items())
+                else:
+                    output.append((key, val))
+            except AttributeError:
+                output.append((key, val))
     return dict(output)
 
 
@@ -94,14 +100,14 @@ def load_configs(vals: Union[str, dict]) -> Optional[dict]:
             with open(vals) as file:
                 output = json.load(file)
                 if check_nested_dicts(output):
-                    output = flatten_dict(output)
+                    output = flatten_dict(output, True)
             return output
         except FileNotFoundError:
             logging.error('The provided file was not found')
     elif isinstance(vals, dict):
         output = vals
         if check_nested_dicts(output):
-            output = flatten_dict(output)
+            output = flatten_dict(output, True)
         return output
     else:
         logging.error('Not supported configuration\'s input')
