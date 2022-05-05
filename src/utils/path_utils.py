@@ -49,11 +49,11 @@ def set_working_path(target_paths: Union[str, list] = None) -> None:
         When default, still appends root directory to path.
     """
     working_dir = get_root_path()
-    if isinstance(list, target_paths):
+    if isinstance(target_paths, list):
         for t_path in target_paths:
             n_dir = f'{working_dir}/{t_path}'
             sys.path.insert(0, n_dir)
-    elif isinstance(str, target_paths):
+    elif isinstance(target_paths, str):
         n_dir = f'{working_dir}/{target_paths}'
         sys.path.insert(0, n_dir)
     else:
@@ -71,22 +71,36 @@ def join_paths(left_side: str, right_side: str):
     return f"{n_left}/{n_right}"
 
 
-def validate_path(input_path: str, use_parent: bool = False) -> str:
+def validate_path(input_path: str, use_root: bool = False) -> str:
     """
     Turn a relative path into an absolute one or returns one path that could
     be left joined with a parent path
     """
-    if use_parent:
-        if input_path.split('/')[0] == '.':
-            root_path = str(Path(__file__))
-            return f"{root_path}/{input_path}"
-        elif input_path.split('/')[0] == '..':
-            root_path = str(Path(__file__).parent)
-            return f"{root_path}/{input_path}"
+    if use_root:
+        if input_path.split('/')[0] == '.' or input_path.split('/')[0] == '..':
+            return _find_path(get_root_path(),
+                              '/'.join(input_path.split('/')[1:]))
+        else:
+            return _find_path(get_root_path(), input_path)
     else:
         if input_path.split('/')[0] == '.' \
                 or input_path.split('/')[0] == '..':
             return '/'.join(input_path.split('/')[1:])
+        else:
+            return input_path
+
+
+def _find_path(starting_path: str, target_path: str) -> str:
+    # To-do: It needs to veryfi if the starting_path is not already contain
+    # in the target path before going trough os.listdir()
+    try:
+        if target_path.split('/')[0] in os.listdir(starting_path):
+            return f"{starting_path}/{target_path}"
+        else:
+            new_start = f"{starting_path}/{target_path.split('/')[0]}"
+            _find_path(new_start, '/'.join(target_path.split('/')[1:]))
+    except IndexError:
+        raise KeyError("The provided path was not found in the Library folder")
 
 
 def only_folder_path(input_str: str) -> str:
@@ -150,11 +164,32 @@ def remove_folder(target_path: Union[str, list]) -> None:
             logging.info("Folder %s did not exists", only_folder)
 
 
-def file_exists(target_path: Union[str, list]) -> Union[bool, list]:
+def file_exists(target_path: Union[str, list], is_absolute: bool = False) \
+        -> Union[bool, list]:
     """
     Verify wether a file exists or not
     """
     if isinstance(target_path, str):
-        return os.path.exists(target_path)
+        if is_absolute:
+            return os.path.exists(target_path)
+        else:
+            return os.path.exists(validate_path(target_path))
     else:
-        return [os.path.exists(p) for p in target_path]
+        if is_absolute:
+            return [os.path.exists(p) for p in target_path]
+        else:
+            return [os.path.exists(validate_path(p)) for p in target_path]
+
+
+def save_file(target_path: str, file_name: str, content: str) -> None:
+    """
+    Saves strings to a file specified by inputed path
+    """
+    create_folder(target_path)
+    with open(target_path+file_name, 'w') as file:
+        file.write(str(content))
+
+
+def remove_file(path: str, name: str) -> None:
+    if os.path.exists(path+name):
+        os.remove(path+name)
