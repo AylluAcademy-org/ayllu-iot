@@ -1,4 +1,5 @@
 # General imports
+from optparse import Values
 import os
 import subprocess
 from typing import Union
@@ -243,20 +244,50 @@ def topayment_wallet(wallet_id, derivation_path):
     subprocess.run(command_string)
 
 
-def validate_vars(keywords: list, input_vars: dict) -> list:
+def validate_vars_mandatory(keywords: list, input_vars: dict) -> list:
     """
     Complementing `validate_dict` and implemented
     at `parse_inputs`.
 
-    TO DO:
-    Missing to annotate/distinguish between optional and necessary arguments
     """
-    for key, val in input_vars.items():
+
+
+    result = []
+    keys = input_vars.keys()
+    for key in keywords:
         try:
-            assert val is not None and key in keywords
+            assert key in keys and input_vars[key] is not None
+            result.append(input_vars[key])
         except AssertionError:
-            print(f'Provide a valid input for {key}')
-    return vars.values()
+            print(f'{key} is missing')
+            result = []
+            break
+    
+    return result
+
+def validate_address(address: dict) -> bool:
+    """
+
+    """
+    if not address.startswith('addr' or 'DdzFF'):
+        print(f"{address} is not a valid addresss")
+        return False
+    else:
+        return True
+
+def validate_vars_others(keywords: list, input_vars: dict) -> list:
+    """
+    Complementing `validate_dict` and implemented
+    at `parse_inputs`.
+
+    """
+    result = []
+    for key in keywords:
+        if key in input_vars.keys():
+            result.append(input_vars[key])
+        else: 
+            result.append(None)
+    return result
 
 
 def validate_dict(keywords: list, vals: Union[str, dict]) \
@@ -296,3 +327,25 @@ def parse_inputs(keywords: list, *args, **kwargs):
             return output
     else:
         return validate_vars(keywords, kwargs)
+
+def min_utxo_lovelace1 (num_assets, total_asset_name_len, utxoCostPerWord, era):
+
+#///////////////////////////////////////////////////////
+# minAda (u) = max (minUTxOValue, (quot (minUTxOValue, adaOnlyUTxOSize)) * (utxoEntrySizeWithoutVal + (size B)))
+
+    POLICYIDSize = 28
+    utxo_entry_size = 27
+    has_datum = False
+    num_policies = 1
+
+    byte_len = num_assets * 12 + total_asset_name_len + num_policies * POLICYIDSize
+    # print(byte_len)
+
+    b_size = 6 + (byte_len + 7) // 8
+    
+
+    data_hash_size = 10 if has_datum else 0
+    finalized_size = utxo_entry_size + b_size + data_hash_size
+    minUTxOValue = finalized_size * utxoCostPerWord
+
+    return minUTxOValue
