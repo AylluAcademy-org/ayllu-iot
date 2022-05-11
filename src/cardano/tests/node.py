@@ -24,23 +24,16 @@ key = Keys()
 
 
 #############################################
-address_origin = 'addr_test1qpu78mfpzpq2pspecsl496lzzeerlcmwkpl6udd4ny7emwhyze5w4t8hucl0c76k5v90yvjkzyag4l8v3nsau3w4d75q87z5xq'
+address_origin = 'ForMinting'
 
 address_destin = 'addr_test1qzz7l5yx4pvqcd3lgnay95g7mpn4vfce49htshwtpxw3ypyes4gaskwme3lygpq6elm702mfjcyt257lhz6rs80f0x0s50329z'
 
-print(node.get_balance(address_destin))
+# print(node.get_balance(address_destin))
 
 metadata = {
     "1456": "Hola Mundo"
 }
-
-witness = 1
-
-params = {
-  "message": {
-    "tx_info": {
-      "address_origin": address_origin,
-      "address_destin": [
+address_destin = [
         {
           "address": "addr_test1qzz7l5yx4pvqcd3lgnay95g7mpn4vfce49htshwtpxw3ypyes4gaskwme3lygpq6elm702mfjcyt257lhz6rs80f0x0s50329z",  # noqa: E501
           "amount": {
@@ -49,7 +42,29 @@ params = {
             },
           "assets": {},
         },
-      ],
+      ]
+
+witness = 1
+
+hash = key.keyHashing('ForMinting')
+
+policyID = node.create_multisig_script('ForMinting', 'all', '', [hash])
+
+policyID = node.create_policy_id('ForMinting')
+
+scriptName = 'ForMinting'
+
+mint = {policyID:[{
+          "name": "1042Prueba",
+          "amount": 2
+        }]
+        }
+
+params = {
+  "message": {
+    "tx_info": {
+      "address_origin": address_origin,
+      "address_destin": None,
       "change_address": address_origin,
       "metadata": metadata,
       "mint": None,
@@ -60,5 +75,5 @@ params = {
 }
 
 result = node.build_tx_components(**params)
-node.sign_transaction('ForMinting')
+node.sign_transaction(address_origin)
 node.submit_transaction()

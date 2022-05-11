@@ -67,6 +67,7 @@ class Cardano:
         except Exception:
             rawResult = output.stderr.decode('utf-8')
         
+        print(rawResult)
         return(rawResult)
 
 class Node(Cardano):
@@ -391,7 +392,7 @@ class Node(Cardano):
             "type": str(type),
             "scripts": script_array
         }
-        if type != 'all' or 'any':
+        if type != 'all' and 'any':
             if required == '':
                 print("Type different than all or any must have required field specified")
                 return None
@@ -410,13 +411,16 @@ class Node(Cardano):
         Returns:
             _type_: policyID, policy_script
         """
-        print('Executing Creation of Minting Policy')
-        keys_file_path = self.path + '/' + script_name
+        print('Executing Creation of Minting Policy ID')
+        keys_file_path = self.KEYS_FILE_PATH + '/' + script_name
+        if not os.path.exists(keys_file_path):
+            os.makedirs(keys_file_path)
         # Generate policyID from the policy script file
-        command_string = ['cardano-cli', 'transaction', 'policyid', '--script-file', keys_file_path + '/' + script_name + '.script']
+        command_string = ['cardano-cli', 'transaction', 'policyid', '--script-file', keys_file_path +'/' + script_name + '.script']
         rawResult = self.execute_command(command_string, None)
         policyID = str(rawResult).rstrip()
-        utils.save_files(keys_file_path + '/', script_name + '.script', str(policyID))
+        utils.save_files(keys_file_path + '/', script_name + '.policyid', str(policyID))
+        
         return policyID
 
     def sign_transaction(self, sign_address_name):
@@ -611,8 +615,8 @@ class Node(Cardano):
             # Upacking the minimum required arguments 
             min_keywords = ['address_origin', 'change_address']
             min_keywords_values = utils.validate_vars_mandatory(min_keywords, params['message']['tx_info'])
-            address_origin = min_keywords_values[0]
-            change_address = min_keywords_values[1]
+            address_origin_name = min_keywords_values[0]
+            change_address_name = min_keywords_values[1]
 
             # Unpacking optional arguments
             other_keywords = ['address_destin', 'metadata', 'mint', 'script_path', 'witness']
@@ -627,62 +631,43 @@ class Node(Cardano):
             with open(self.TRANSACTION_PATH_FILE + '/protocol.json','r') as file:
                 utxoCostPerWord = json.load(file)['utxoCostPerWord']
             min_utxo_value = utils.min_utxo_lovelace1(0, 0, utxoCostPerWord, '')
+            quantity_array = [min_utxo_value]
 
-            # Validating values
-            # Validating address origin
-            # quantity_origin_address_array = []
-            # deplete = False
-            # TxHash_in_array = []
-            # for address_origin in address_origin_array:
-            #     if utils.validate_address(address_origin['address']):
-            #         addr_origin_balance = self.get_balance(address_origin['address'])
-            #         quantity_origin_address = min_utxo_value
-            #         assert addr_origin_balance['lovelace'] > 0
-            #         if 'amount' in address_origin:
-            #             quantity_origin_address = address_origin['amount']['quantity']
-            #             unit = address_origin['amount']['unit']
-            #             if unit == 'ADA':
-            #                 quantity_origin_address = quantity_origin_address / 1_000_000
-            #             assert addr_origin_balance['lovelace'] >= quantity_origin_address
-            #             quantity_origin_address_array.append(quantity_origin_address)
-            #         if 'assets' in address_origin:
-            #             for asset in address_origin['assets']:
-            #                 asset_name = asset['name']
-            #                 asset_quantity = asset['quantity']
-            #                 if asset_name in addr_origin_balance:
-            #                     assert addr_origin_balance[asset_name] >= asset_quantity
-            #         addr_origin_tx = self.get_transactions(address_origin['address'])
-
-            #         TxHash_in, amount_equal = self.utxo_selection(
-            #             addr_origin_tx, quantity_origin_address, deplete)
-            #         TxHash_in_array.append(TxHash_in)
-            # if sum(quantity_origin_address_array) == 0 and len(address_origin_array)>=2:
-            #     raise AssertionError
-            
-
-
-                    
-                    # else:
-                    #     addr_origin_balance = self.get_balance(address_origin['address'])
-
-
-
-            # address_destin_array = params['message']['tx_info']['address_destin']
-            # metadata = params['message']['tx_info']['metadata']
-            # mint = params['message']['tx_info']['mint']
-            # script_path = params['message']['tx_info']['script_path']
-            # witness = params['message']['tx_info']['witness']
-            
-
+            root_keys_path = self.KEYS_FILE_PATH + '/' + address_origin_name + '/'
+            output = utils.cat_files(root_keys_path, address_origin_name + '.base.addr')
+            address_origin = output.communicate()[0].decode('utf-8')
+            if change_address_name == address_origin_name:
+                change_address = address_origin
             addr_origin_balance = self.get_balance(address_origin)
             if addr_origin_balance['lovelace'] != 0:
                 addr_origin_tx = self.get_transactions(address_origin)
 
-                quantity_array = []
+                mint_output_string = ''
                 addr_output_array = []
-                if address_destin_array is None:
+                asset_quantity_array = []
+                mint_string = ''
+                if mint is not None:
+                    total_asset_name_len = 0
+                    for key, values in mint.items():
+                        policyid = key
+                        for token_info in values:
+                            asset_name = token_info['name'].encode('utf-8')
+                            asset_name = b16encode(asset_name).decode('utf-8')
+                            asset_quantity = int(token_info['amount'])
+                            asset_quantity_array.append(asset_quantity)
+                            total_asset_name_len += len(asset_name)
+                            mint_output_string += str(asset_quantity) + ' ' + str(policyid) + '.' + str(asset_name) + '+'
+
+                    mint_output_string = mint_output_string[:-1]
+                    mint_string = '--mint='
+                    mint_string = mint_string  + mint_output_string
+                    min_utxo_value = utils.min_utxo_lovelace1(sum(asset_quantity_array), total_asset_name_len, utxoCostPerWord, '')
+                    addr_output_array.append('--tx-out')
+                    addr_output_array.append(address_origin + '+' + str(min_utxo_value) + '+' + mint_output_string)
+                    
                     quantity_array = [min_utxo_value]
-                else:
+
+                if address_destin_array is not None:
                     for address_destin in address_destin_array:
                         quantity = address_destin['amount']['quantity']
                         quantity_array.append(quantity)
@@ -723,16 +708,14 @@ class Node(Cardano):
                     command_string, index = self.insert_command(
                         3+i, 1, command_string, metadata_array
                         )
-                i = i + index
+                    i = i + index
                 mint_array = []
-                if mint is not None:
-                    mint_array.append(mint)
+                if mint_string != '':
+                    mint_array.append(mint_string)
                     mint_array.append('--minting-script-file')
-                    mint_array.append(script)
-                    command_string, index = self.insert_command(
-                        3+i,1,command_string,mint_array
-                        )
-                i = i + index
+                    mint_array.append(root_keys_path + address_origin_name + '.script')
+                    command_string, index = self.insert_command(3+i,1,command_string,mint_array)
+                    i = i + index
                 script_path_array = []
                 if script_path is not None:
                     script_path_array.append('--tx-in-script-file')
@@ -740,11 +723,13 @@ class Node(Cardano):
                     command_string, index = self.insert_command(
                         3+i,1,command_string,script_path_array
                         )
-                i = i + index
+                    i = i + index
                 if self.CARDANO_NETWORK == 'testnet':
                     command_string, index = self.insert_command(
                         3+i,1,command_string,['--testnet-magic',self.CARDANO_NETWORK_MAGIC]
                         )
+                
+                print(command_string)
                 
                 rawResult = self.execute_command(command_string, None)
                 print(command_string)
@@ -767,7 +752,7 @@ class Node(Cardano):
         except TypeError:
             print("Missing required arguments")
         except AssertionError:
-            print("Please verify the balance of the origin address")
+            print("Please verify your inputs in params. Possibly mint without policyID")
 
 
 
