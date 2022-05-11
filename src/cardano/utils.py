@@ -1,5 +1,4 @@
 # General imports
-from optparse import Values
 import os
 import subprocess
 from typing import Union
@@ -7,16 +6,16 @@ from decouple import config  # type: ignore
 import json
 
 # Package imports
-# from src.utils.path_utils import get_root_path
+from src.utils.path_utils import get_root_path
 
-# working_dir = get_root_path()
-# cardano_configs = f'{working_dir}/config/cardano_config.json'
+working_dir = get_root_path()
+cardano_configs = f'{working_dir}/config/cardano_config.json'
 
-# with open(cardano_configs) as file:
-#     params = json.load(file)
-# keys_file_path = params['node']['KEYS_FILE_PATH']
-# if not os.path.exists(keys_file_path):
-#     os.makedirs(keys_file_path)
+with open(cardano_configs) as file:
+    params = json.load(file)
+keys_file_path = params['node']['KEYS_FILE_PATH']
+if not os.path.exists(keys_file_path):
+    os.makedirs(keys_file_path)
 
 
 def create_folder(path):
@@ -41,8 +40,8 @@ def cat_files(path, name):
 
 
 def remove_files(path, name):
-    if os.path.exists(path+name):
-        os.remove(path+name)
+    if os.path.exists(path + name):
+        os.remove(path + name)
     # os.rmdir(path+name)
     # shutil.rmtree(path+name)
 
@@ -59,7 +58,7 @@ def save_metadata(path, name, metadata):
             metadata_json_file = path + '/' + name
 
         return metadata_json_file
-    except:
+    except TypeError:
         raise TypeError()
 
 
@@ -81,7 +80,7 @@ def towallet(wallet_id, mnemonic):
         ]
         output2 = subprocess.Popen(
             command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-        output.stdout.close()
+        # output.stdout.close()
 
         content = output2.communicate()[0].decode('utf-8')
         # Save temp private keys files
@@ -96,7 +95,7 @@ def towallet(wallet_id, mnemonic):
         ]
         output3 = subprocess.Popen(
             command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-        output.stdout.close()
+        # output.stdout.close()
         # Generate payment key
         output = cat_files(path, wallet_id + '.root.prv')
         command_string = [
@@ -104,11 +103,11 @@ def towallet(wallet_id, mnemonic):
         ]
         output4 = subprocess.Popen(
             command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-        output.stdout.close()
+        # output.stdout.close()
         stake_xprv = output3.communicate()[0].decode('utf-8')
         payment_xprv = output4.communicate()[0].decode('utf-8')
-        output3.stdout.close()
-        output4.stdout.close()
+        # output3.stdout.close()
+        # output4.stdout.close()
 
         # Save payment key into file
         save_files(path, wallet_id + '.stake.xprv', str(stake_xprv))
@@ -121,7 +120,7 @@ def towallet(wallet_id, mnemonic):
         ]
         output1 = subprocess.Popen(
             command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-        output.stdout.close()
+        # output.stdout.close()
         payment_xpub = output1.communicate()[0].decode('utf-8')
         save_files(path, wallet_id + '.payment.xpub', str(payment_xpub))
         CARDANO_NETWORK = config('CARDANO_NETWORK')
@@ -133,7 +132,7 @@ def towallet(wallet_id, mnemonic):
             CARDANO_NETWORK]
         output1 = subprocess.Popen(
             command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-        output.stdout.close()
+        # output.stdout.close()
         payment_addr = output1.communicate()[0].decode('utf-8')
         save_files(path, wallet_id + '.payment.addr', str(payment_addr))
 
@@ -143,29 +142,25 @@ def towallet(wallet_id, mnemonic):
         command_string = [
             'cardano-cli', 'key', 'convert-cardano-address-key',
             '--shelley-payment-key', '--signing-key-file',
-            path + wallet_id + '.payment.xprv', '--out-file', path + wallet_id
-                 + '.payment.skey']
+            path + wallet_id + '.payment.xprv', '--out-file', path + wallet_id + '.payment.skey']
         subprocess.run(command_string)
         command_string = [
             'cardano-cli', 'key', 'convert-cardano-address-key',
             '--shelley-stake-key', '--signing-key-file',
-            path + wallet_id + '.stake.xprv', '--out-file', path
-            + wallet_id + '.stake.skey'
+            path + wallet_id + '.stake.xprv', '--out-file', path + wallet_id + '.stake.skey'
         ]
         subprocess.run(command_string)
 
         # Get verification keys from signing keys.
         command_string = [
             'cardano-cli', 'key', 'verification-key', '--signing-key-file',
-            path +
-            wallet_id + '.stake.skey',
+            path + wallet_id + '.stake.skey',
             '--verification-key-file', path + wallet_id + '.stake.evkey'
         ]
         subprocess.run(command_string)
         command_string = [
             'cardano-cli', 'key', 'verification-key', '--signing-key-file',
-            path +
-            wallet_id + '.payment.skey',
+            path + wallet_id + '.payment.skey',
             '--verification-key-file', path + wallet_id + '.payment.evkey'
         ]
         subprocess.run(command_string)
@@ -173,15 +168,13 @@ def towallet(wallet_id, mnemonic):
         # Get non-extended verification keys from extended verification keys.
         command_string = [
             'cardano-cli', 'key', 'non-extended-key',
-            '--extended-verification-key-file', path +
-            wallet_id + '.stake.evkey',
+            '--extended-verification-key-file', path + wallet_id + '.stake.evkey',
             '--verification-key-file', path + wallet_id + '.stake.vkey'
         ]
         subprocess.run(command_string)
         command_string = [
             'cardano-cli', 'key', 'non-extended-key',
-            '--extended-verification-key-file', path +
-            wallet_id + '.payment.evkey',
+            '--extended-verification-key-file', path + wallet_id + '.payment.evkey',
             '--verification-key-file', path + wallet_id + '.payment.vkey'
         ]
         subprocess.run(command_string)
@@ -190,27 +183,22 @@ def towallet(wallet_id, mnemonic):
         CARDANO_NETWORK_MAGIC = config('CARDANO_NETWORK_MAGIC')
         command_string = [
             'cardano-cli', 'stake-address', 'build',
-            '--stake-verification-key-file', path +
-            wallet_id + '.stake.vkey',
+            '--stake-verification-key-file', path + wallet_id + '.stake.vkey',
             '--testnet-magic', CARDANO_NETWORK_MAGIC, '--out-file',
             path + wallet_id + '.stake.addr'
         ]
         subprocess.run(command_string)
         command_string = [
             'cardano-cli', 'address', 'build',
-            '--payment-verification-key-file', path +
-            wallet_id + '.payment.vkey',
-            '--testnet-magic', CARDANO_NETWORK_MAGIC, '--out-file', path +
-            wallet_id + '.payment.addr'
+            '--payment-verification-key-file', path + wallet_id + '.payment.vkey',
+            '--testnet-magic', CARDANO_NETWORK_MAGIC, '--out-file', path + wallet_id + '.payment.addr'
         ]
         subprocess.run(command_string)
         command_string = [
             'cardano-cli', 'address', 'build',
-            '--payment-verification-key-file', path +
-            wallet_id + '.payment.vkey',
+            '--payment-verification-key-file', path + wallet_id + '.payment.vkey',
             '--stake-verification-key-file', path + wallet_id + '.stake.vkey',
-            '--testnet-magic', CARDANO_NETWORK_MAGIC, '--out-file', path
-            + wallet_id + '.base.addr'
+            '--testnet-magic', CARDANO_NETWORK_MAGIC, '--out-file', path + wallet_id + '.base.addr'
         ]
         subprocess.run(command_string)
     except Exception:
@@ -227,9 +215,9 @@ def topayment_wallet(wallet_id, derivation_path):
     ]
     output1 = subprocess.Popen(
         command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-    output.stdout.close()
+    # output.stdout.close()
     payment_xprv = output1.communicate()[0].decode('utf-8')
-    output1.stdout.close()
+    # output1.stdout.close()
     save_files(path, wallet_id + '.payment.xprv', str(payment_xprv))
 
     # Convert cardano-addresses extended signing keys to corresponding
@@ -238,8 +226,7 @@ def topayment_wallet(wallet_id, derivation_path):
     command_string = [
         'cardano-cli', 'key', 'convert-cardano-address-key',
         '--shelley-payment-key', '--signing-key-file',
-        path + wallet_id + '.payment.xprv', '--out-file', path + wallet_id
-        + '.payment.skey'
+        path + wallet_id + '.payment.xprv', '--out-file', path + wallet_id + '.payment.skey'
     ]
     subprocess.run(command_string)
 
@@ -250,8 +237,6 @@ def validate_vars_mandatory(keywords: list, input_vars: dict) -> list:
     at `parse_inputs`.
 
     """
-
-
     result = []
     keys = input_vars.keys()
     for key in keywords:
@@ -262,10 +247,10 @@ def validate_vars_mandatory(keywords: list, input_vars: dict) -> list:
             print(f'{key} is missing')
             result = []
             break
-    
     return result
 
-def validate_address(address: dict) -> bool:
+
+def validate_address(address: str) -> bool:
     """
 
     """
@@ -274,6 +259,7 @@ def validate_address(address: dict) -> bool:
         return False
     else:
         return True
+
 
 def validate_vars_others(keywords: list, input_vars: dict) -> list:
     """
@@ -285,13 +271,12 @@ def validate_vars_others(keywords: list, input_vars: dict) -> list:
     for key in keywords:
         if key in input_vars.keys():
             result.append(input_vars[key])
-        else: 
+        else:
             result.append(None)
     return result
 
 
-def validate_dict(keywords: list, vals: Union[str, dict]) \
-        -> Union[dict, list]:
+def validate_dict(keywords: list, vals: Union[str, dict]):
     """
     Complementing `validate_vars` and implemented
     at `parse_inputs`.
@@ -326,12 +311,13 @@ def parse_inputs(keywords: list, *args, **kwargs):
         else:
             return output
     else:
-        return validate_vars(keywords, kwargs)
+        return validate_vars_mandatory(keywords, kwargs)
 
-def min_utxo_lovelace1 (num_assets, total_asset_name_len, utxoCostPerWord, era):
 
-#///////////////////////////////////////////////////////
-# minAda (u) = max (minUTxOValue, (quot (minUTxOValue, adaOnlyUTxOSize)) * (utxoEntrySizeWithoutVal + (size B)))
+def min_utxo_lovelace1(num_assets, total_asset_name_len, utxoCostPerWord, era):
+
+    ################################################
+    # minAda (u) = max (minUTxOValue, (quot (minUTxOValue, adaOnlyUTxOSize)) * (utxoEntrySizeWithoutVal + (size B)))
 
     POLICYIDSize = 28
     utxo_entry_size = 27
@@ -342,8 +328,6 @@ def min_utxo_lovelace1 (num_assets, total_asset_name_len, utxoCostPerWord, era):
     # print(byte_len)
 
     b_size = 6 + (byte_len + 7) // 8
-    
-
     data_hash_size = 10 if has_datum else 0
     finalized_size = utxo_entry_size + b_size + data_hash_size
     minUTxOValue = finalized_size * utxoCostPerWord
