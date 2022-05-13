@@ -2,7 +2,7 @@
 import json
 # Package imports
 from src.iot.devices import DeviceCardano
-from src.cardano.utils import parse_inputs
+from src.utils.data_utils import parse_inputs
 
 
 def basic_math(*args, **kwargs) -> list:

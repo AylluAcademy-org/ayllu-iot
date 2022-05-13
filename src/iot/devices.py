@@ -1,19 +1,9 @@
 # General Imports
 import json
-import logging
 from typing import Union
 # Module Imports
 from src.iot.core import Device
-from src.utils.path_utils import get_root_path
-from src.utils.data_utils import check_nested_dicts, flatten_dict
-
-working_dir = get_root_path()
-
-
-class DeviceIot(Device):
-    # Pending implementation
-    def __init__(self):
-        pass
+from src.utils.data_utils import load_configs
 
 
 class DeviceCardano(Device):
@@ -31,17 +21,17 @@ class DeviceCardano(Device):
         Should contain only Enums such as in `scr.iot.commands`
     """
 
-    from src.iot.commands import CardanoFunctions, Keysfunctions, 
-        WalletFunctions, NodeFunctions, \
-        IotExtensionFunctions
+    from src.iot.commands import Keysfunctions, WalletFunctions, \
+        NodeFunctions, IotExtensionFunctions
     # To-do: Only import if not loaded
-    device_id: str
-    metadata: dict
-    functions_list: list
+    _device_id: str
+    _metadata: dict
+    _functions_list: list
 
     def __init__(self, id: str,
-                 functions: list = [WalletFunctions, NodeFunctions,
-                                    IotExtensionFunctions]) -> None:
+                 functions: list = [Keysfunctions, WalletFunctions,
+                                    NodeFunctions, IotExtensionFunctions]) \
+            -> None:
         """
         Constructor for DeviceCardano class.
 
@@ -78,20 +68,7 @@ class DeviceCardano(Device):
             file to be read. Else, an already loaded python
             dictionary.
         """
-        if isinstance(vals, str):
-            try:
-                with open(f'{working_dir}/{vals}') as file:
-                    self._metadata = json.load(file)
-                    if check_nested_dicts(self._metadata):
-                        self._metadata = flatten_dict(self._metadata)
-            except FileNotFoundError:
-                logging.error('The provided file was not found')
-        elif isinstance(vals, dict):
-            self._metadata = vals
-            if check_nested_dicts(self._metadata):
-                self._metadata = flatten_dict(self._metadata)
-        else:
-            logging.error('Not supported configuration\'s input')
+        self._metadata = load_configs(vals)
 
     def message_treatment(self, message) -> dict:
         """
@@ -111,17 +88,17 @@ class DeviceCardano(Device):
         """
         try:
             super().validate_message(message)
-            super().validate_inputs(message.message)
+            super().validate_inputs(message.payload)
         except AssertionError:
             print('Invalid Message Object')
         main = {'client_id': message.client_id}
-        cmd = message.message['cmd'].upper()
+        cmd = message.payload['cmd'].upper()
         func = [f for funcs in self._functions_list
                 for n, f in funcs.items() if n == cmd][0]
         if not func:
-            raise ValueError("The command does not exists")
-        if message.message['args']:
-            params = func(message.message['args'])
+            raise ValueError("The specified command does not exists")
+        if message.payload['args']:
+            params = func(message.payload['args'])
         else:
             params = func()
         if isinstance(params, list) or isinstance(params, tuple):

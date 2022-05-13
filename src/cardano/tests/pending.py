@@ -1,7 +1,14 @@
+<<<<<<< HEAD
 from src.cardano.base import Keys, Node
 
 key = Keys()
 node = Node()
+=======
+from src.cardano.base import Keys
+
+key = Keys()
+# node = Node()
+>>>>>>> remotes/origin/dev
 
 # tx_id = node.get_txid()
 # print(tx_id)
@@ -107,7 +114,12 @@ wallet_names = ['wallet01', 'wallet02', 'wallet03']
 
 # node.assemble_tx(sign_wallets)
 
+<<<<<<< HEAD
 # #########
 # # Submit the transaction
 # #########
 # node.submit_transaction()
+=======
+script_address = key.create_address_script(name)
+print(script_address)
+>>>>>>> remotes/origin/dev

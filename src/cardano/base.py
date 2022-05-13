@@ -1,5 +1,8 @@
 """
-Module Docstring
+This submodule defines the main classes representing the following Cardano
+objects: Node and Wallet. In addition to an extesion class IotExtensions that
+inherits and extends specific applications for the interaction with AWS IoT
+submodule located at src/iot/
 """
 
 # General Imports
@@ -14,22 +17,32 @@ import requests
 
 # Module Imports
 import src.cardano.utils as utils
+from src.utils.data_utils import validate_dict, parse_inputs
 from src.utils.path_utils import get_root_path
 
-working_dir = get_root_path()
-cardano_configs = f'{working_dir}/config/cardano_config.json'
+WORKING_DIR = get_root_path()
+CARDANO_CONFIGS = f'{WORKING_DIR}/config/cardano_config.json'
 
 
 class Cardano:
 
     """
-    config_path: str, default= 'config/cardano_config.json'
-        Configurations for interacting with Cardano network
+    Class for Node object. Contains all the basic functions for interactions
+    with cardano-cli excluding those competent to Wallet.
+
+    Attributes
+    ----------
+    config_path: str, default=CARDANO_CONFIGS
+        Configurations for interacting with Cardano node. Default configuration
+        follow our node setup, but it is advisable to be modified based on your
+        system needs.
     """
-    def __init__(self, config_path=cardano_configs):
+
+    def __init__(self, config_path=CARDANO_CONFIGS):
         try:
             with open(config_path) as file:
                 params = json.load(file)
+
             self.CARDANO_NETWORK_MAGIC = params['node']['CARDANO_NETWORK_MAGIC']
             self.CARDANO_CLI_PATH = params['node']['CARDANO_CLI_PATH']
             self.CARDANO_NETWORK = params['node']['CARDANO_NETWORK']
@@ -74,7 +87,7 @@ class Node(Cardano):
     """
     Class using primarly Cardano CLI commands
     """
-    def __init__(self, config_path=cardano_configs):
+    def __init__(self, config_path=CARDANO_CONFIGS):
         super().__init__(config_path=config_path)
 
     def id_to_address(self, wallet_id):
@@ -662,7 +675,7 @@ class Wallet(Cardano):
 
     """
 
-    def __init__(self, config_path=cardano_configs):
+    def __init__(self, config_path=CARDANO_CONFIGS):
         super().__init__(config_path=config_path)
 
     def list_wallets(self):
@@ -718,7 +731,7 @@ class Wallet(Cardano):
         Inputs: Id of the wallet
         """
         print('Executing Wallet Deletion')
-        id = utils.parse_inputs(['id'], args, kwargs)
+        id = parse_inputs(['id'], args, kwargs)
         print(id)
         request_status_url = self.URL + id
         r = requests.delete(request_status_url)
@@ -765,7 +778,7 @@ class Wallet(Cardano):
         Inputs: Id of the wallet
         Return: json with details of the transaction and the status """
         print('Executing Confirmation of all the Transactions')
-        id = utils.parse_inputs(['id'], args, kwargs)
+        id = parse_inputs(['id'], args, kwargs)
         request_address_url = self.URL + id + '/transactions'
         r = requests.get(request_address_url)
         r = r.json()
@@ -776,7 +789,7 @@ class Wallet(Cardano):
         Inputs: Id of the wallet
         Return: json with details of the transaction and the status """
         print('Executing Confirmation of the Transaction')
-        id, tx_id = utils.parse_inputs(['id', 'tx_id'], args, kwargs)
+        id, tx_id = parse_inputs(['id', 'tx_id'], args, kwargs)
         request_address_url = self.URL + id + '/transactions/' + tx_id
         r = requests.get(request_address_url)
         r = r.json()
@@ -791,7 +804,7 @@ class Wallet(Cardano):
         Return: json with the policyid, asset name, fingerprint and metadata
         """
         print('Executing Assets Info')
-        id = utils.parse_inputs(['id'], args, kwargs)
+        id = parse_inputs(['id'], args, kwargs)
         request_address_url = self.URL + id + '/assets'
         r = requests.get(request_address_url)
         r = r.json()
@@ -799,7 +812,7 @@ class Wallet(Cardano):
 
 
 class Keys(Cardano):
-    def __init__(self, config_path=cardano_configs):
+    def __init__(self, config_path=CARDANO_CONFIGS):
         super().__init__(config_path=config_path)
         self.path = self.KEYS_FILE_PATH
         self.cardano_network = self.CARDANO_NETWORK
@@ -1177,7 +1190,6 @@ class Keys(Cardano):
         return key_hash
 
     def deriveAllKeys(self, size, name):
-
         """This function creates all the keys and addresses and save them
         in root_folder/priv/wallet/walletname path
 
@@ -1193,15 +1205,18 @@ class Keys(Cardano):
         stake = self.deriveExtendedSigningStakeKey(root_key)
         payment = self.deriveExtendedSigningPaymentKey(root_key)
 
-        payment_public_account_key = self.deriveExtendedVerificationPaymentKey(payment)
-        stake_public_account_key = self.deriveExtendedVerificationStakeKey(stake)
+        payment_public_account_key = self.deriveExtendedVerificationPaymentKey(
+            payment)
+        stake_public_account_key = self.deriveExtendedVerificationStakeKey(
+            stake)
 
         payment_address = self.derivePaymentAddress(payment_public_account_key)
         # Convert from cardano wallet keys to cardano-cli keys
         """
         Convert payment signing keys
         """
-        payment_skey, payment_vkey, payment_addr = self.convertPaymentKey(payment, name)
+        payment_skey, payment_vkey, payment_addr = self.convertPaymentKey(
+            payment, name)
         """
         Convert stake signing keys
         """
@@ -1212,11 +1227,16 @@ class Keys(Cardano):
         hash_verification_key = self.keyHashing(name)
 
         # Building the paths
-        payment_skey_path = self.path + '/' + name + '/' + name + '.payment.skey'
-        payment_vkey_path = self.path + '/' + name + '/' + name + '.payment.vkey'
-        payment_addr_path = self.path + '/' + name + '/' + name + '.payment.addr'
-        stake_skey_path = self.path + '/' + name + '/' + name + '.stake.skey'
-        stake_vkey_path = self.path + '/' + name + '/' + name + '.stake.vkey'
+        payment_skey_path = self.path + '/' + name + '/' + name \
+            + '.payment.skey'
+        payment_vkey_path = self.path + '/' + name + '/' + name \
+            + '.payment.vkey'
+        payment_addr_path = self.path + '/' + name + '/' + name \
+            + '.payment.addr'
+        stake_skey_path = self.path + '/' + name + '/' + name \
+            + '.stake.skey'
+        stake_vkey_path = self.path + '/' + name + '/' + name \
+            + '.stake.vkey'
         stake_addr_path = self.path + '/' + name + '/' + name + '.stake.addr'
 
         # Creating the dict
@@ -1242,7 +1262,8 @@ class Keys(Cardano):
             json.dump(keys, file, indent=4, ensure_ascii=False)
 
         print("##################################")
-        print("Find all the keys and address details in: %s" % (self.path + '/' + name + '/' + name + '.json'))
+        print("Find all the keys and address details in: %s" %
+              (self.path + '/' + name + '/' + name + '.json'))
         print("##################################")
         return keys
 
@@ -1293,19 +1314,19 @@ class Keys(Cardano):
 
 
 class IotExtensions(Node, Wallet):
-    def __init__(self, config_path=cardano_configs):
+    def __init__(self, config_path=CARDANO_CONFIGS):
         super().__init__(config_path=config_path)
 
     def get_wallet_info(self, input_vals: dict) -> dict:
         print('Executing Wallet Info')
-        id = utils.validate_dict(['id'], input_vals)
+        id = validate_dict(['id'], input_vals)
         address = self.get_addresses(id, 'unused')
         wallet_info = self.wallet_info(id)
         return {'address': address, 'wallet_info': wallet_info}
 
     def generate_wallet(self, input_vals: dict) -> tuple:
         print('Executing Generate Wallet')
-        mnemonic, name, passphrase = utils.validate_dict(
+        mnemonic, name, passphrase = validate_dict(
             ['mnemonic', 'name', 'passphrase'], input_vals)
         wallet_status = self.create_wallet(name, passphrase, mnemonic)
         id = wallet_status['id']
@@ -1315,15 +1336,15 @@ class IotExtensions(Node, Wallet):
 
     def generate_keys(self, input_vals: dict):
         print('Executing Generate keys')
-        id, mnemonic = utils.validate_dict(
+        id, mnemonic = validate_dict(
             ['id', 'mnemonic'], input_vals
         )
 
     def send_transaction(self, input_vals: dict):
         print('Executing Send Transaction')
-        id, data = utils.validate_dict(['id', 'data'], input_vals)
+        id, data = validate_dict(['id', 'data'], input_vals)
         data["time_to_live"] = {"quantity": 60,
                                 "unit": "second"}
         data["withdrawal"] = "self"
         print(data)
-        return super(Wallet, self).send_transaction(id, data)
+        return super().send_transaction(id, data)
