@@ -1,11 +1,10 @@
 # General imports
 import os
 import subprocess
-from typing import Union
 from decouple import config  # type: ignore
 import json
 
-# Package imports
+# Module imports
 from src.utils.path_utils import get_root_path
 
 working_dir = get_root_path()
