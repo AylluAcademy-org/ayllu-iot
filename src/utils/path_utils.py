@@ -173,12 +173,13 @@ def file_exists(target_path: Union[str, list], is_absolute: bool = False) \
         if is_absolute:
             return os.path.exists(target_path)
         else:
-            return os.path.exists(validate_path(target_path))
+            return os.path.exists(validate_path(target_path, True))
     else:
         if is_absolute:
             return [os.path.exists(p) for p in target_path]
         else:
-            return [os.path.exists(validate_path(p)) for p in target_path]
+            return [os.path.exists(validate_path(p, True)) \
+                    for p in target_path]
 
 
 def save_file(target_path: str, file_name: str, content: str) -> None:

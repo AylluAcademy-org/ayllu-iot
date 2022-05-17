@@ -133,7 +133,7 @@ class IotCore(Thing, Callbacks):
         return self.metadata['client_id']
 
     def get_topic(self) -> str:
-        """
+        """create_folder
         Getter function for topic metadata
         """
         # To-do: Implement array for multiple topic initialization
@@ -157,7 +157,7 @@ class IotCore(Thing, Callbacks):
                 region=self.metadata['AWS_REGION'],
                 credentials_provider=credentials_provider,
                 http_proxy_options=proxy_options,
-                ca_filepath=self.metadata['root-ca'],
+                ca_filepath=validate_path(self.metadata['root-ca'], True),
                 on_connection_resumed=self.on_connection_resumed,
                 client_id=self.metadata['client_id'],
                 clean_session=True, keep_alive_secs=30)
@@ -166,8 +166,9 @@ class IotCore(Thing, Callbacks):
     def _files_setup(self, vals: Union[str, dict]):
         self._metadata = load_configs(vals, False)
         for f in TARGET_FOLDERS:
-            create_folder(self.metadata[f])
-        self._download_certificates(self.metadata['root-ca'])
+            create_folder(validate_path(self.metadata[f], True))
+        self._download_certificates(validate_path(self.metadata['root-ca'], \
+                                    True))
         if not all(b is True for b in file_exists([self.metadata['cert'],
                                                    self.metadata['key']])):
             raise FileExistsError("RSA Keys are not available at the indicated\
@@ -206,11 +207,10 @@ class IotCore(Thing, Callbacks):
 
     @staticmethod
     def _download_certificates(output_path: str) -> None:
-        verified_path = validate_path(output_path)
-        if not file_exists(verified_path, True):
+        if not file_exists(output_path, True):
             print("Downloading AWS IoT Root CA certificate from AWS...\n")
             url_ = "https://www.amazontrust.com/repository/AmazonRootCA1.pem"
-            subprocess.run(f"curl {url_} > {verified_path}",
+            subprocess.run(f"curl {url_} > {output_path}",
                            shell=True, check=True)
         else:
             print("Certificate file already exists\t Skipping step...")
