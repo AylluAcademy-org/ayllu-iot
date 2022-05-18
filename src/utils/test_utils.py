@@ -11,5 +11,5 @@ def load_cardano_configs():
     with open(f'{parent_dir}/config/cardano_config.json') as file:
         configs = json.load(file)
         if check_nested_dicts(configs):
-            configs = flatten_dict(configs)
+            configs = flatten_dict(configs, False)
     return configs

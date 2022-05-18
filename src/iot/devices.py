@@ -40,7 +40,7 @@ class DeviceCardano(Device):
         device_id: str
             Unique identifier for the device.
         """
-        self._device_id = id
+        self._device_id = id  # Review if no collision with Thing id
         self._metadata = None
         self._functions_list = functions
         super().__init__()
@@ -68,7 +68,7 @@ class DeviceCardano(Device):
             file to be read. Else, an already loaded python
             dictionary.
         """
-        self._metadata = load_configs(vals)
+        self._metadata = load_configs(vals, True)
 
     def message_treatment(self, message) -> dict:
         """

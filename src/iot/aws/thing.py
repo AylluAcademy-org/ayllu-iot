@@ -11,15 +11,14 @@ from abc import ABC
 from typing import Union
 
 from awscrt import io, mqtt, auth  # type: ignore
-from awsiot import mqtt_connection_builder  # type: ignore
+from awsiot import mqtt_connection_builder
+from src.cardano.base import WORKING_DIR  # type: ignore
 
 # Module imports
-from src.utils.path_utils import file_exists, get_root_path, validate_path
+from src.utils.path_utils import file_exists, validate_path
 from src.utils.data_utils import load_configs
 from src.utils.path_utils import create_folder
 from src.iot.core import Message, Device, Thing
-
-working_dir = get_root_path()
 
 TARGET_FOLDERS = ['cert', 'key', 'root-ca']
 TARGET_AWS = ['AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_REGION']
@@ -94,8 +93,9 @@ class IotCore(Thing, Callbacks):
         ----------
         """
         load_dotenv()
-        configs = config_path if config_path != 'config/aws_config.json' \
-            else f'{working_dir}/{config_path}'
+        configs = config_path \
+            if config_path != "config/aws_config.json" \
+            else f'{WORKING_DIR}/{config_path}'
         self._files_setup(configs)
         self._metadata['client_id'] = "test-" + str(uuid4())
         if issubclass(handler_object, Device):
@@ -103,6 +103,7 @@ class IotCore(Thing, Callbacks):
             self.connection = self._create_connection()
             self.topic_queue = {}
             self._handler = handler_object
+            # Pending adding metadata for handler_object
         else:
             raise TypeError("Provide a valid device handler")
 
@@ -132,7 +133,7 @@ class IotCore(Thing, Callbacks):
         return self.metadata['client_id']
 
     def get_topic(self) -> str:
-        """
+        """create_folder
         Getter function for topic metadata
         """
         # To-do: Implement array for multiple topic initialization
@@ -156,17 +157,18 @@ class IotCore(Thing, Callbacks):
                 region=self.metadata['AWS_REGION'],
                 credentials_provider=credentials_provider,
                 http_proxy_options=proxy_options,
-                ca_filepath=self.metadata['root-ca'],
+                ca_filepath=validate_path(self.metadata['root-ca'], True),
                 on_connection_resumed=self.on_connection_resumed,
                 client_id=self.metadata['client_id'],
                 clean_session=True, keep_alive_secs=30)
         return mqtt_connection
 
     def _files_setup(self, vals: Union[str, dict]):
-        self._metadata = load_configs(vals)
+        self._metadata = load_configs(vals, False)
         for f in TARGET_FOLDERS:
-            create_folder(self.metadata[f])
-        self._download_certificates(self.metadata['root-ca'])
+            create_folder(validate_path(self.metadata[f], True))
+        self._download_certificates(validate_path(self.metadata['root-ca'],
+                                    True))
         if not all(b is True for b in file_exists([self.metadata['cert'],
                                                    self.metadata['key']])):
             raise FileExistsError("RSA Keys are not available at the indicated\
@@ -192,24 +194,23 @@ class IotCore(Thing, Callbacks):
                     continue
         if any([True for t in TARGET_AWS[:2] if t in missing]):
             try:
-                f = open('~/.aws/credentials')
+                f = open(f"{os.environ['HOME']}/.aws/credentials")
                 f.close()
             except FileNotFoundError:
                 raise FileNotFoundError('Missing IAM Configs')
         elif TARGET_AWS[-1] in missing:
             try:
-                f = open('~/.aws/config')
+                f = open(f"{os.environ['HOME']}/.aws/config")
                 f.close()
             except FileNotFoundError:
                 raise FileNotFoundError('IoT Region is not set')
 
     @staticmethod
     def _download_certificates(output_path: str) -> None:
-        verified_path = f"{working_dir}/{validate_path(output_path)}"
-        if not file_exists(verified_path):
+        if not file_exists(output_path, True):
             print("Downloading AWS IoT Root CA certificate from AWS...\n")
             url_ = "https://www.amazontrust.com/repository/AmazonRootCA1.pem"
-            subprocess.run(f"curl {url_} > {verified_path}",
+            subprocess.run(f"curl {url_} > {output_path}",
                            shell=True, check=True)
         else:
             print("Certificate file already exists\t Skipping step...")

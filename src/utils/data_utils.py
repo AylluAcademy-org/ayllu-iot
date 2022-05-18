@@ -3,6 +3,9 @@ import logging
 from typing import Optional, Union
 import json
 
+# Module imports
+from src.utils.path_utils import validate_path
+
 
 def check_nested_dicts(vals: dict):
     """
@@ -14,7 +17,7 @@ def check_nested_dicts(vals: dict):
         return False
 
 
-def flatten_dict(input_dict, deep: bool=False):
+def flatten_dict(input_dict, deep: bool = False):
     """
     Reduce dictionary to only one nested level
     """
@@ -36,7 +39,7 @@ def flatten_dict(input_dict, deep: bool=False):
     return dict(output)
 
 
-def validate_vars(keywords: list, input_vars: dict) -> list:
+def validate_vars(keywords: list, input_vars: dict, mandatory: bool = False) -> list:
     """
     Complementing `validate_dict` and implemented
     at `parse_inputs`.
@@ -44,12 +47,20 @@ def validate_vars(keywords: list, input_vars: dict) -> list:
     TO DO:
     Missing to annotate/distinguish between optional and necessary arguments
     """
+    result = []
     for key, val in input_vars.items():
         try:
             assert val is not None and key in keywords
+            result.append(val)
         except AssertionError:
-            print(f'Provide a valid input for {key}')
-    return vars.values()
+            if mandatory:
+                print(f'Provide a valid input for {key}')
+                result = []
+                break
+            else:
+                result.append(None)
+                continue
+    return result
 
 
 def validate_dict(keywords: list, vals: Union[str, dict]) \
@@ -77,7 +88,7 @@ def validate_dict(keywords: list, vals: Union[str, dict]) \
             print('Provide a valid input')
 
 
-def parse_inputs(keywords: list, *args, **kwargs):
+def parse_inputs(keywords: list, fill: bool = False, *args, **kwargs):
     """
     Parse the input for Cardano objects functions.
     """
@@ -88,26 +99,26 @@ def parse_inputs(keywords: list, *args, **kwargs):
         else:
             return output
     else:
-        return validate_vars(keywords, kwargs)
+        return validate_vars(keywords, kwargs, fill)
 
 
-def load_configs(vals: Union[str, dict]) -> Optional[dict]:
+def load_configs(vals: Union[str, dict], full_flat: bool) -> Optional[dict]:
     """
     Loads configuration files into a dictionary to be use for reading configs
     """
     if isinstance(vals, str):
         try:
-            with open(vals) as file:
+            with open(validate_path(vals, False)) as file:
                 output = json.load(file)
                 if check_nested_dicts(output):
-                    output = flatten_dict(output, True)
+                    output = flatten_dict(output, full_flat)
             return output
         except FileNotFoundError:
             logging.error('The provided file was not found')
     elif isinstance(vals, dict):
         output = vals
         if check_nested_dicts(output):
-            output = flatten_dict(output, True)
+            output = flatten_dict(output, full_flat)
         return output
     else:
         logging.error('Not supported configuration\'s input')

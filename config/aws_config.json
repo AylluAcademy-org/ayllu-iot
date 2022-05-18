@@ -1,8 +1,8 @@
 {
     "AWS_IOT": {
-        "cert": "./.certificates/test_device.pem.crt",
-        "key": "./.certificates/test_device.private.key",
-        "root-ca": "./.certificates/root-CA.crt",
+        "cert": "../.certificates/test_device.pem.crt",
+        "key": "../.certificates/test_device.private.key",
+        "root-ca": "../.certificates/root-CA.crt",
         "topic": "test/topic",
         "verbosity":{
             "NoLogs":"NoLogs",
