@@ -197,12 +197,40 @@ class Cardano:
         command_string = [
             'cardano-address', 'key', 'child', derivation_path_concat
         ]
+        output4 = subprocess.Popen(
+            command_string, stdin=output.stdout, stdout=subprocess.PIPE)
+        # output.stdout.close()
+        stake_xprv = output3.communicate()[0].decode('utf-8')
+        payment_xprv = output4.communicate()[0].decode('utf-8')
+        # output3.stdout.close()
+        # output4.stdout.close()
+
+        # Save payment key into file
+        save_files(path, wallet_id + '.stake.xprv', str(stake_xprv))
+        save_files(path, wallet_id + '.payment.xprv', str(payment_xprv))
+
+        # Generate payment verification key xpub
+        output = cat_files(path, wallet_id + '.payment.xprv')
+        command_string = [
+            'cardano-address', 'key', 'public', '--with-chain-code'
+        ]
         output1 = subprocess.Popen(
             command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-        output.stdout.close()
-        payment_xprv = output1.communicate()[0].decode('utf-8')
-        output1.stdout.close()
-        save_file(path, wallet_id + '.payment.xprv', str(payment_xprv))
+        # output.stdout.close()
+        payment_xpub = output1.communicate()[0].decode('utf-8')
+        save_files(path, wallet_id + '.payment.xpub', str(payment_xpub))
+        CARDANO_NETWORK = config('CARDANO_NETWORK')
+
+        # Generate payment address from verification key
+        output = cat_files(path, wallet_id + '.payment.xprv')
+        command_string = [
+            'cardano-address', 'address', 'payment', '--network-tag',
+            CARDANO_NETWORK]
+        output1 = subprocess.Popen(
+            command_string, stdin=output.stdout, stdout=subprocess.PIPE)
+        # output.stdout.close()
+        payment_addr = output1.communicate()[0].decode('utf-8')
+        save_files(path, wallet_id + '.payment.addr', str(payment_addr))
 
         # Convert cardano-addresses extended signing keys to corresponding
         # Shelley-format keys.
