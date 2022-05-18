@@ -4,7 +4,6 @@ from enum import Enum
 from src.cardano.base import Wallet, Node, IotExtensions, Keys
 
 
-
 class Keysfunctions(Enum):
     """
     Enum loaded with the functions for Keys Class, paired with actionable
@@ -19,7 +18,7 @@ class WalletFunctions(Enum):
     keywords that serve as commands for the IoT Service
     """
     LIST_WALLETS = Wallet.list_wallets
-    MIN_FEES = Wallet.min_fees
+    # MIN_FEES = Wallet.min_fees
     CONFIRM_TRANSACTION = Wallet.confirm_transaction
     CONFIRM_TRANSACTION_BY_TX = Wallet.confirm_transaction_by_tx
     DELETE_WALLET = Wallet.delete_wallet
@@ -32,8 +31,6 @@ class NodeFunctions(Enum):
     keywords that serve as commands for the IoT Service
     """
     QUERY_TIP = Node.query_tip_exec
-    CREATE_MINTING_POLICY = Node.create_minting_policy
-    MINT_ASSET = Node.minting
     GET_TRANSACTIONS = Node.get_transactions
     GET_BALANCE = Node.get_balance
 

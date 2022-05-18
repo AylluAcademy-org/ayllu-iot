@@ -42,6 +42,9 @@ class Cardano:
             create_folder(_is_missing)
 
     def towallet(self, wallet_id, mnemonic):
+        """
+        Function to ...
+        """
         try:
             ################################
             # generating additional keys before the actual creation
@@ -59,7 +62,7 @@ class Cardano:
             ]
             output2 = subprocess.Popen(
                 command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-            output.stdout.close()
+            # output.stdout.close()
 
             content = output2.communicate()[0].decode('utf-8')
             # Save temp private keys files
@@ -74,7 +77,7 @@ class Cardano:
             ]
             output3 = subprocess.Popen(
                 command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-            output.stdout.close()
+            # output.stdout.close()
             # Generate payment key
             output = self.cat_files(path, wallet_id + '.root.prv')
             command_string = [
@@ -82,11 +85,11 @@ class Cardano:
             ]
             output4 = subprocess.Popen(
                 command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-            output.stdout.close()
+            # output.stdout.close()
             stake_xprv = output3.communicate()[0].decode('utf-8')
             payment_xprv = output4.communicate()[0].decode('utf-8')
-            output3.stdout.close()
-            output4.stdout.close()
+            # output3.stdout.close()
+            # output4.stdout.close()
 
             # Save payment key into file
             save_file(path, wallet_id + '.stake.xprv', str(stake_xprv))
@@ -99,7 +102,7 @@ class Cardano:
             ]
             output1 = subprocess.Popen(
                 command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-            output.stdout.close()
+            # output.stdout.close()
             payment_xpub = output1.communicate()[0].decode('utf-8')
             save_file(path, wallet_id + '.payment.xpub', str(payment_xpub))
 
@@ -110,7 +113,7 @@ class Cardano:
                 self.CARDANO_NETWORK]
             output1 = subprocess.Popen(
                 command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-            output.stdout.close()
+            # output.stdout.close()
             payment_addr = output1.communicate()[0].decode('utf-8')
             save_file(path, wallet_id + '.payment.addr', str(payment_addr))
 
@@ -120,45 +123,39 @@ class Cardano:
             command_string = [
                 'cardano-cli', 'key', 'convert-cardano-address-key',
                 '--shelley-payment-key', '--signing-key-file',
-                path + wallet_id + '.payment.xprv', '--out-file',
-                path + wallet_id + '.payment.skey']
+                path + wallet_id + '.payment.xprv', '--out-file', path + wallet_id + '.payment.skey']
             subprocess.run(command_string)
             command_string = [
                 'cardano-cli', 'key', 'convert-cardano-address-key',
                 '--shelley-stake-key', '--signing-key-file',
-                path + wallet_id + '.stake.xprv', '--out-file', path
-                + wallet_id + '.stake.skey'
+                path + wallet_id + '.stake.xprv', '--out-file', path + wallet_id + '.stake.skey'
             ]
             subprocess.run(command_string)
 
             # Get verification keys from signing keys.
             command_string = [
                 'cardano-cli', 'key', 'verification-key', '--signing-key-file',
-                path +
-                wallet_id + '.stake.skey',
+                path + wallet_id + '.stake.skey',
                 '--verification-key-file', path + wallet_id + '.stake.evkey'
             ]
             subprocess.run(command_string)
             command_string = [
                 'cardano-cli', 'key', 'verification-key', '--signing-key-file',
-                path +
-                wallet_id + '.payment.skey',
+                path + wallet_id + '.payment.skey',
                 '--verification-key-file', path + wallet_id + '.payment.evkey'
             ]
             subprocess.run(command_string)
 
-            # Get non-extended verification keys from extended ones.
+            # Get non-extended verification keys from extended verification keys.
             command_string = [
                 'cardano-cli', 'key', 'non-extended-key',
-                '--extended-verification-key-file', path +
-                wallet_id + '.stake.evkey',
+                '--extended-verification-key-file', path + wallet_id + '.stake.evkey',
                 '--verification-key-file', path + wallet_id + '.stake.vkey'
             ]
             subprocess.run(command_string)
             command_string = [
                 'cardano-cli', 'key', 'non-extended-key',
-                '--extended-verification-key-file', path +
-                wallet_id + '.payment.evkey',
+                '--extended-verification-key-file', path + wallet_id + '.payment.evkey',
                 '--verification-key-file', path + wallet_id + '.payment.vkey'
             ]
             subprocess.run(command_string)
@@ -166,25 +163,23 @@ class Cardano:
             # Build stake and payment addresses
             command_string = [
                 'cardano-cli', 'stake-address', 'build',
-                '--stake-verification-key-file', path +
-                wallet_id + '.stake.vkey',
+                '--stake-verification-key-file', path + wallet_id + '.stake.vkey',
                 '--testnet-magic', self.CARDANO_NETWORK_MAGIC, '--out-file',
                 path + wallet_id + '.stake.addr'
             ]
             subprocess.run(command_string)
-            command_string = ['cardano-cli', 'address', 'build',
-                              '--payment-verification-key-file', path +
-                              wallet_id + '.payment.vkey',
-                              '--testnet-magic', self.CARDANO_NETWORK_MAGIC,
-                              '--out-file', path + wallet_id + '.payment.addr']
+            command_string = [
+                'cardano-cli', 'address', 'build',
+                '--payment-verification-key-file', path + wallet_id + '.payment.vkey',
+                '--testnet-magic', self.CARDANO_NETWORK_MAGIC, '--out-file', path + wallet_id + '.payment.addr'
+            ]
             subprocess.run(command_string)
-            command_string = ['cardano-cli', 'address', 'build',
-                              '--payment-verification-key-file', path +
-                              wallet_id + '.payment.vkey',
-                              '--stake-verification-key-file', path +
-                              wallet_id + '.stake.vkey', '--testnet-magic',
-                              self.CARDANO_NETWORK_MAGIC, '--out-file', path
-                              + wallet_id + '.base.addr']
+            command_string = [
+                'cardano-cli', 'address', 'build',
+                '--payment-verification-key-file', path + wallet_id + '.payment.vkey',
+                '--stake-verification-key-file', path + wallet_id + '.stake.vkey',
+                '--testnet-magic', self.CARDANO_NETWORK_MAGIC, '--out-file', path + wallet_id + '.base.addr'
+            ]
             subprocess.run(command_string)
         except Exception:
             print('problems generating the keys or saving the files')
@@ -197,40 +192,12 @@ class Cardano:
         command_string = [
             'cardano-address', 'key', 'child', derivation_path_concat
         ]
-        output4 = subprocess.Popen(
-            command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-        # output.stdout.close()
-        stake_xprv = output3.communicate()[0].decode('utf-8')
-        payment_xprv = output4.communicate()[0].decode('utf-8')
-        # output3.stdout.close()
-        # output4.stdout.close()
-
-        # Save payment key into file
-        save_files(path, wallet_id + '.stake.xprv', str(stake_xprv))
-        save_files(path, wallet_id + '.payment.xprv', str(payment_xprv))
-
-        # Generate payment verification key xpub
-        output = cat_files(path, wallet_id + '.payment.xprv')
-        command_string = [
-            'cardano-address', 'key', 'public', '--with-chain-code'
-        ]
         output1 = subprocess.Popen(
             command_string, stdin=output.stdout, stdout=subprocess.PIPE)
         # output.stdout.close()
-        payment_xpub = output1.communicate()[0].decode('utf-8')
-        save_files(path, wallet_id + '.payment.xpub', str(payment_xpub))
-        CARDANO_NETWORK = config('CARDANO_NETWORK')
-
-        # Generate payment address from verification key
-        output = cat_files(path, wallet_id + '.payment.xprv')
-        command_string = [
-            'cardano-address', 'address', 'payment', '--network-tag',
-            CARDANO_NETWORK]
-        output1 = subprocess.Popen(
-            command_string, stdin=output.stdout, stdout=subprocess.PIPE)
-        # output.stdout.close()
-        payment_addr = output1.communicate()[0].decode('utf-8')
-        save_files(path, wallet_id + '.payment.addr', str(payment_addr))
+        payment_xprv = output1.communicate()[0].decode('utf-8')
+        # output1.stdout.close()
+        save_file(path, wallet_id + '.payment.xprv', str(payment_xprv))
 
         # Convert cardano-addresses extended signing keys to corresponding
         # Shelley-format keys.
@@ -238,10 +205,39 @@ class Cardano:
         command_string = [
             'cardano-cli', 'key', 'convert-cardano-address-key',
             '--shelley-payment-key', '--signing-key-file',
-            path + wallet_id + '.payment.xprv', '--out-file', path + wallet_id
-            + '.payment.skey'
+            path + wallet_id + '.payment.xprv', '--out-file', path + wallet_id + '.payment.skey'
         ]
         subprocess.run(command_string)
+
+    def validate_address(self, address: str) -> bool:
+        """
+        Empty docstring
+        """
+        if not address.startswith('addr' or 'DdzFF'):
+            print(f"{address} is not a valid addresss")
+            return False
+        else:
+            return True
+
+    def min_utxo_lovelace1(self, num_assets, total_asset_name_len, utxoCostPerWord, era):
+        ################################################
+        # minAda (u) = max (minUTxOValue, (quot (minUTxOValue, adaOnlyUTxOSize)) * (utxoEntrySizeWithoutVal + \
+        #               (size B)))
+
+        POLICYIDSize = 28
+        utxo_entry_size = 27
+        has_datum = False
+        num_policies = 1
+
+        byte_len = num_assets * 12 + total_asset_name_len + num_policies * POLICYIDSize
+        # print(byte_len)
+
+        b_size = 6 + (byte_len + 7) // 8
+        data_hash_size = 10 if has_datum else 0
+        finalized_size = utxo_entry_size + b_size + data_hash_size
+        minUTxOValue = finalized_size * utxoCostPerWord
+
+        return minUTxOValue
 
     @staticmethod
     def cat_files(path, name):

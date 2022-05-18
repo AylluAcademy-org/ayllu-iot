@@ -167,7 +167,7 @@ class IotCore(Thing, Callbacks):
         self._metadata = load_configs(vals, False)
         for f in TARGET_FOLDERS:
             create_folder(validate_path(self.metadata[f], True))
-        self._download_certificates(validate_path(self.metadata['root-ca'], \
+        self._download_certificates(validate_path(self.metadata['root-ca'],
                                     True))
         if not all(b is True for b in file_exists([self.metadata['cert'],
                                                    self.metadata['key']])):

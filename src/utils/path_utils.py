@@ -178,7 +178,7 @@ def file_exists(target_path: Union[str, list], is_absolute: bool = False) \
         if is_absolute:
             return [os.path.exists(p) for p in target_path]
         else:
-            return [os.path.exists(validate_path(p, True)) \
+            return [os.path.exists(validate_path(p, True))
                     for p in target_path]
 
 

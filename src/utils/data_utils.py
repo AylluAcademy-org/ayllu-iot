@@ -39,7 +39,7 @@ def flatten_dict(input_dict, deep: bool = False):
     return dict(output)
 
 
-def validate_vars(keywords: list, input_vars: dict) -> list:
+def validate_vars(keywords: list, input_vars: dict, mandatory: bool = False) -> list:
     """
     Complementing `validate_dict` and implemented
     at `parse_inputs`.
@@ -47,12 +47,20 @@ def validate_vars(keywords: list, input_vars: dict) -> list:
     TO DO:
     Missing to annotate/distinguish between optional and necessary arguments
     """
+    result = []
     for key, val in input_vars.items():
         try:
             assert val is not None and key in keywords
+            result.append(val)
         except AssertionError:
-            print(f'Provide a valid input for {key}')
-    return vars.values()
+            if mandatory:
+                print(f'Provide a valid input for {key}')
+                result = []
+                break
+            else:
+                result.append(None)
+                continue
+    return result
 
 
 def validate_dict(keywords: list, vals: Union[str, dict]) \
@@ -80,7 +88,7 @@ def validate_dict(keywords: list, vals: Union[str, dict]) \
             print('Provide a valid input')
 
 
-def parse_inputs(keywords: list, *args, **kwargs):
+def parse_inputs(keywords: list, fill: bool = False, *args, **kwargs):
     """
     Parse the input for Cardano objects functions.
     """
@@ -91,7 +99,7 @@ def parse_inputs(keywords: list, *args, **kwargs):
         else:
             return output
     else:
-        return validate_vars(keywords, kwargs)
+        return validate_vars(keywords, kwargs, fill)
 
 
 def load_configs(vals: Union[str, dict], full_flat: bool) -> Optional[dict]:
