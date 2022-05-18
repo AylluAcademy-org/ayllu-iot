@@ -71,27 +71,29 @@ def join_paths(left_side: str, right_side: str):
     return f"{n_left}/{n_right}"
 
 
-def validate_path(input_path: str, use_root: bool = False) -> str:
+def validate_path(input_path: str, use_root: bool = False, exists: bool = False) -> str:
     """
     Turn a relative path into an absolute one or returns one path that could
     be left joined with a parent path
     """
-    if use_root:
-        if input_path.split('/')[0] == '.' or input_path.split('/')[0] == '..':
-            return _find_path(get_root_path(),
-                              '/'.join(input_path.split('/')[1:]))
+    if input_path.split('/')[0] == '.' or input_path.split('/')[0] == '..':
+        if use_root and exists:
+            return _find_path(get_root_path(), '/'.join(input_path.split('/')[1:]))
+        elif use_root and not exists:
+            return join_paths(get_root_path(), '/'.join(input_path.split('/')[1:]))
         else:
-            return _find_path(get_root_path(), input_path)
-    else:
-        if input_path.split('/')[0] == '.' \
-                or input_path.split('/')[0] == '..':
             return '/'.join(input_path.split('/')[1:])
+    else:
+        if use_root and exists:
+            return _find_path(get_root_path(), input_path)
+        elif use_root and not exists:
+            return join_paths(get_root_path(), input_path)
         else:
             return input_path
 
 
 def _find_path(starting_path: str, target_path: str) -> str:
-    # To-do: It needs to veryfi if the starting_path is not already contain
+    # To-do: It needs to verify if the starting_path is not already contain
     # in the target path before going trough os.listdir()
     try:
         if target_path.split('/')[0] in os.listdir(starting_path):

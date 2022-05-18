@@ -17,7 +17,6 @@ from src.cardano.base import WORKING_DIR  # type: ignore
 # Module imports
 from src.utils.path_utils import file_exists, validate_path
 from src.utils.data_utils import load_configs
-from src.utils.path_utils import create_folder
 from src.iot.core import Message, Device, Thing
 
 TARGET_FOLDERS = ['cert', 'key', 'root-ca']
@@ -83,9 +82,7 @@ class IotCore(Thing, Callbacks):
     _topic_queue: dict
     _handler: Device
 
-    def __init__(self, handler_object: Device,
-                 config_path: Union[str, dict] = 'config/aws_config.json') \
-            -> None:
+    def __init__(self, handler_object: Device, config_path: Union[str, dict] = 'config/aws_config.json') -> None:
         """
         Constructor method for Thing object
 
@@ -94,8 +91,7 @@ class IotCore(Thing, Callbacks):
         """
         load_dotenv()
         configs = config_path \
-            if config_path != "config/aws_config.json" \
-            else f'{WORKING_DIR}/{config_path}'
+            if config_path != "config/aws_config.json" else f'{WORKING_DIR}/{config_path}'
         self._files_setup(configs)
         self._metadata['client_id'] = "test-" + str(uuid4())
         if issubclass(handler_object, Device):
@@ -166,7 +162,7 @@ class IotCore(Thing, Callbacks):
     def _files_setup(self, vals: Union[str, dict]):
         self._metadata = load_configs(vals, False)
         for f in TARGET_FOLDERS:
-            create_folder(validate_path(self.metadata[f], True))
+            validate_path(self.metadata[f], True, True)
         self._download_certificates(validate_path(self.metadata['root-ca'],
                                     True))
         if not all(b is True for b in file_exists([self.metadata['cert'],

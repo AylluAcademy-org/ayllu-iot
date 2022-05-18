@@ -5,8 +5,7 @@ import json
 
 # Module imports
 from src.utils.data_utils import load_configs
-from src.utils.path_utils import save_file, validate_path, remove_folder, \
-    create_folder, remove_file
+from src.utils.path_utils import remove_folder, save_file, validate_path, create_folder, remove_file
 
 
 class Cardano:
@@ -35,11 +34,11 @@ class Cardano:
 
         _temp_dirs = [validate_path(folder, True) for folder in
                       [self.TRANSACTION_PATH_FILE, self.KEYS_FILE_PATH]]
-        _is_missing = [p for p in _temp_dirs if not os.listdir(p)]
-
+        remove_folder(_temp_dirs)
+        create_folder(_temp_dirs)
+        _is_missing = [p for p in _temp_dirs if not os.path.isdir(p)]
         if _is_missing:
-            remove_folder(_is_missing)
-            create_folder(_is_missing)
+            raise FileExistsError(f"We were not able to create the following folders: {_is_missing}")
 
     def towallet(self, wallet_id, mnemonic):
         """
