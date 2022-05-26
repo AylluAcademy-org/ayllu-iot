@@ -11,8 +11,8 @@ from abc import ABC
 from typing import Union
 
 from awscrt import io, mqtt, auth  # type: ignore
-from awsiot import mqtt_connection_builder
-from src.cardano.base import WORKING_DIR  # type: ignore
+from awsiot import mqtt_connection_builder #  type: ignore
+from src.cardano.base import WORKING_DIR 
 
 # Module imports
 from src.utils.path_utils import file_exists, validate_path

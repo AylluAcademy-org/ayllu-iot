@@ -400,7 +400,7 @@ class Node(Cardano):
         ]
         rawResult = self.execute_command(command_string, None)
         policyID = str(rawResult).rstrip()
-        self.save_files(keys_file_path + '/', script_name + '.policyid', str(policyID))
+        self.save_file(keys_file_path + '/', script_name + '.policyid', str(policyID))
 
         return policyID
 
