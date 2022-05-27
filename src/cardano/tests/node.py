@@ -4,6 +4,10 @@ from src.cardano.base import Keys
 node = Node()
 key = Keys()
 
+resultado = node.query_protocol()
+print(resultado)
+
+
 # address = 'addr_test1qrp2m43wryxjm95jhq02q4vg8tjq82k5t6paay87u90xyxz6rf3adxm3anceu8wd3zv4gmr4\
 #               kl5kl3qth4mlqd8alhls4kpp0t'
 

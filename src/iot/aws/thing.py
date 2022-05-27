@@ -242,8 +242,10 @@ class IotCore(Thing, Callbacks):
             if not msg.payload['seq']:
                 print(f"Message without seq param, no command executed \
                         {msg}\n")
+                self.topic_queue[topic].pop(0)
             else:
                 print("Continuing with follow message...\n")
+                self.topic_queue[topic].pop(0)
 
     def _process_message(self, input_msgs: list[Message], topic_msg: str) \
             -> bool:
