@@ -18,8 +18,6 @@ def run_iot() -> None:
 
     thing = IotCore(DeviceCardano)
 
-    print(f"Device Created: {thing.get_client_id()}")
-
     thing.start_logging()
 
     connect_future = thing.connection.connect()

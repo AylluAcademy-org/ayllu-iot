@@ -1,3 +1,4 @@
+from enum import Enum, unique
 from typing import Any, Optional
 from abc import ABC, abstractmethod
 from dataclasses import dataclass

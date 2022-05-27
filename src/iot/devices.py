@@ -2,8 +2,9 @@
 import json
 from typing import Union
 # Module Imports
-from src.iot.core import Device
-from src.utils.data_utils import load_configs
+from src.iot.core import Device, Message
+from src.cardano.base import Wallet, Node, Keys, IotExtensions
+from src.utils.data_utils import load_configs, extract_functions
 
 
 class DeviceCardano(Device):
@@ -21,17 +22,13 @@ class DeviceCardano(Device):
         Should contain only Enums such as in `scr.iot.commands`
     """
 
-    from src.iot.commands import Keysfunctions, WalletFunctions, \
-        NodeFunctions, IotExtensionFunctions
     # To-do: Only import if not loaded
     _device_id: str
     _metadata: dict
-    _functions_list: list
+    _executors: dict
 
-    def __init__(self, id: str,
-                 functions: list = [Keysfunctions, WalletFunctions,
-                                    NodeFunctions, IotExtensionFunctions]) \
-            -> None:
+    def __init__(self, id: str, executors_list: list[str] = [],
+                 cardano_configs: Union[str, dict] = None) -> None:
         """
         Constructor for DeviceCardano class.
 
@@ -42,8 +39,13 @@ class DeviceCardano(Device):
         """
         self._device_id = id  # Review if no collision with Thing id
         self._metadata = None
-        self._functions_list = functions
+        if executors_list:
+            self._executors = self._initialize_classes(executors_list, cardano_configs)
+        else:
+            self._executors = self._initialize_classes(["Keys", "Wallet",
+                                                        "Node", "IotExtensions"], cardano_configs)
         super().__init__()
+        print(f"Device Created: {self.device_id}")
 
     @property
     def device_id(self) -> str:
@@ -70,7 +72,7 @@ class DeviceCardano(Device):
         """
         self._metadata = load_configs(vals, True)
 
-    def message_treatment(self, message) -> dict:
+    def message_treatment(self, message: Message, has_args: bool) -> dict:
         """
         Main function to handle double way traffic of IoT Service.
 
@@ -92,14 +94,15 @@ class DeviceCardano(Device):
         except AssertionError:
             print('Invalid Message Object')
         main = {'client_id': message.client_id}
-        cmd = message.payload['cmd'].upper()
-        func = [f for funcs in self._functions_list
-                for n, f in funcs.items() if n == cmd][0]
+        cmd = message.payload['cmd'].lower()
+        func = [getattr(obj, f) for obj, f_list in self._executors.items() for f in f_list if f == cmd][0]
         if not func:
             raise ValueError("The specified command does not exists")
-        if message.payload['args']:
+        if has_args:
+            print(f"Executing function: {func} \nWith parameters: {message.payload['args']}")
             params = func(message.payload['args'])
         else:
+            print(f"Executing function: {func}")
             params = func()
         if isinstance(params, list) or isinstance(params, tuple):
             p = {f"output_{v}": params[v] for v in range(len(params))}
@@ -113,3 +116,25 @@ class DeviceCardano(Device):
             except ValueError:
                 print("There was an error returning your result")
         return main
+
+    def _initialize_classes(self, classes_list: list, set_configs: Union[str, dict]) -> dict:
+        """
+        Load necessary objects for runtime executions on data threatment
+        """
+        initialized_objects = {}
+        for obj in classes_list:
+            if obj == 'Node':
+                node = Node(set_configs)
+                initialized_objects[node] = extract_functions(node)
+            elif obj == 'Wallet':
+                wallet = Wallet(set_configs)
+                initialized_objects[wallet] = extract_functions(wallet)
+            elif obj == 'Keys':
+                keys = Keys(set_configs)
+                initialized_objects[keys] = extract_functions(keys)
+            elif obj == 'IotExtensions':
+                iot_extensions = IotExtensions(set_configs)
+                initialized_objects[iot_extensions] = extract_functions(iot_extensions)
+            else:
+                raise KeyError('Specified object is not implemented for this Device')
+        return initialized_objects

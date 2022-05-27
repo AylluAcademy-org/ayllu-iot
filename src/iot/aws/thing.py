@@ -12,7 +12,7 @@ from typing import Union
 
 from awscrt import io, mqtt, auth  # type: ignore
 from awsiot import mqtt_connection_builder #  type: ignore
-from src.cardano.base import WORKING_DIR 
+from src.cardano.utils import WORKING_DIR 
 
 # Module imports
 from src.utils.path_utils import file_exists, validate_path
@@ -93,13 +93,12 @@ class IotCore(Thing, Callbacks):
         configs = config_path \
             if config_path != "config/aws_config.json" else f'{WORKING_DIR}/{config_path}'
         self._files_setup(configs)
-        self._metadata['client_id'] = "test-" + str(uuid4())
         if issubclass(handler_object, Device):
             super().__init__()
-            self.connection = self._create_connection()
-            self.topic_queue = {}
-            self._handler = handler_object
+            self._handler = handler_object(id="thing-" + str(uuid4()))
             # Pending adding metadata for handler_object
+            self.topic_queue = {}
+            self.connection = self._create_connection()
         else:
             raise TypeError("Provide a valid device handler")
 
@@ -115,25 +114,25 @@ class IotCore(Thing, Callbacks):
         return self._topic_queue
 
     @topic_queue.setter
-    def topic_queue(self, new_topic):
-        self._topic_queaue = new_topic
+    def topic_queue(self, new_queue):
+        self._topic_queue = new_queue
 
     @property
     def handler(self) -> Device:
         return self._handler
 
-    def get_client_id(self) -> str:
+    def _get_client_id(self) -> str:
         """
         Function for logging purposes so not to expose metadata attribute
         """
-        return self.metadata['client_id']
+        return self.handler.device_id
 
-    def get_topic(self) -> str:
+    def _get_topic(self) -> str:
         """create_folder
         Getter function for topic metadata
         """
         # To-do: Implement array for multiple topic initialization
-        return self.metadata['topic']
+        return self.metadata['AWS_TOPIC']
 
     def _create_connection(self) -> mqtt.Connection:
         """
@@ -155,7 +154,7 @@ class IotCore(Thing, Callbacks):
                 http_proxy_options=proxy_options,
                 ca_filepath=validate_path(self.metadata['root-ca'], True),
                 on_connection_resumed=self.on_connection_resumed,
-                client_id=self.metadata['client_id'],
+                client_id=self._get_client_id(),
                 clean_session=True, keep_alive_secs=30)
         return mqtt_connection
 
@@ -170,7 +169,7 @@ class IotCore(Thing, Callbacks):
             raise FileExistsError("RSA Keys are not available at the indicated\
                                     path")
         env_vars = ['AWS_IOT_ENDPOINT', 'AWS_IOT_PORT', 'AWS_IOT_UID',
-                    'AWS_REGION', 'AWS_KEY_ID', 'AWS_SECRET_KEY']
+                    'AWS_REGION', 'AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_TOPIC']
         for var in env_vars:
             try:
                 if os.environ[var] != '':
@@ -211,40 +210,40 @@ class IotCore(Thing, Callbacks):
         else:
             print("Certificate file already exists\t Skipping step...")
 
-    def manage_messages(self, msg_topic: str, payload: json):
+    def manage_messages(self, topic: str, payload: bytes):
         """
         Method for managing incoming messages onto Thing object
         """
         data = json.loads(payload.decode('utf-8'))
-        if self.metadata['client_id'] == data['client_id']:
-            msg = Message(client_id=data['client_id'],
-                          payload={k: v for k, v in data.items()
-                                   if k != 'client_id'})
-            try:
-                # Build list depending on the number of messages to be received
-                # (Number is set by the seq identifier in the json file)
-                if self.topic_queue[msg_topic]:
-                    self.topic_queue[msg_topic].append(msg)
-                else:
-                    self.topic_queue[msg_topic] = [msg]
-                print(f"[{msg.timestamp}] \t\
-                    Received message from topic: '{msg_topic}' \n \
-                    Current queue:  \t {self.topic_queue[msg_topic]}")
-                # Waits until queue lenght equals sequence
-                assert len(self.topic_queue[msg_topic]) == msg.payload['seq']
-                success = self._process_message(self.topic_queue[msg_topic],
-                                                msg_topic)
-                if success:
-                    self.topic_queue[msg_topic] = []
-            except AssertionError:
-                if not msg.payload['seq']:
-                    print(f"Message without seq param, no command executed \
-                            {msg}")
-                else:
-                    print("Continuing with follow message...")
+        assert self._get_client_id() == data['client_id'], "Client missmatch. Input the correct id"
+        msg = Message(client_id=data['client_id'],
+                        payload={k: v for k, v in data.items()
+                                if k != 'client_id'})
+        try:
+            # Build list depending on the number of messages to be received
+            # (Number is set by the seq identifier in the json file)
+            if self.topic_queue[topic]:
+                self.topic_queue[topic].append(msg)
+                print(f"[{msg.timestamp}] \
+                    Received message from topic: '{topic}' \n \
+                    Current queue:  {self.topic_queue[topic][-1]}\n")
+        except KeyError:
+            self.topic_queue[topic] = [msg]
+            print(f"[{msg.timestamp}] \
+                Received message from topic: '{topic}' \n \
+                Initiating queue with: {self.topic_queue[topic]}\n")
+        # Waits until queue lenght equals sequence
+        if len(self.topic_queue[topic]) == msg.payload['seq']:
+            success = self._process_message(self.topic_queue[topic],
+                                                topic)
+            if success:
+                self.topic_queue[topic] = []
         else:
-            raise KeyError("Connection failed due to client missmatch. \
-                            Input the correct id or try another client")
+            if not msg.payload['seq']:
+                print(f"Message without seq param, no command executed \
+                        {msg}\n")
+            else:
+                print("Continuing with follow message...\n")
 
     def _process_message(self, input_msgs: list[Message], topic_msg: str) \
             -> bool:
@@ -252,7 +251,11 @@ class IotCore(Thing, Callbacks):
         Private method to process a topic queue
         """
         for individual_msg in input_msgs:
-            answer = self.handler.message_treatment(individual_msg)
+            try:
+                args_load = True if individual_msg.payload['args'] else None
+            except KeyError:
+                args_load = False
+            answer = self.handler.message_treatment(individual_msg, args_load)
             output = json.dumps(answer)
             print(f'########################### \n \
                     Publishing message to topic "{topic_msg}": \t{answer} \
@@ -273,7 +276,7 @@ class IotCore(Thing, Callbacks):
         Enable subscription for things service
         """
         future_obj, id = self.connection.subscribe(
-            topic=self.metadata['topic'],
+            topic=self.metadata['AWS_TOPIC'],
             qos=mqtt.QoS.AT_LEAST_ONCE,
             callback=self.manage_messages)
         return future_obj, id

@@ -122,3 +122,12 @@ def load_configs(vals: Union[str, dict], full_flat: bool) -> Optional[dict]:
         return output
     else:
         logging.error('Not supported configuration\'s input')
+
+
+def extract_functions(input_class):
+    """
+    Get functions list from a given class object
+    """
+    raw_methods = dir(input_class)
+    return [func for func in raw_methods if callable(getattr(input_class, func))
+            and func.startswith('_') is False]
