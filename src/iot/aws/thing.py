@@ -4,6 +4,7 @@ import os
 import subprocess
 import asyncio.futures as futures
 from uuid import uuid4
+from datetime import datetime
 import json
 from dotenv import load_dotenv
 
@@ -79,7 +80,6 @@ class IotCore(Thing, Callbacks):
     """
     _connection: mqtt.Connection
     _metadata: dict
-    _topic_queue: dict
     _handler: Device
 
     def __init__(self, handler_object: Device, config_path: Union[str, dict] = 'config/aws_config.json') -> None:
@@ -219,52 +219,64 @@ class IotCore(Thing, Callbacks):
         msg = Message(client_id=data['client_id'],
                         payload={k: v for k, v in data.items()
                                 if k != 'client_id'})
+        print(f"[{msg.timestamp}] Received message from topic: '{topic}'")
         try:
+            self.topic_queue[topic].clear()
+        except KeyError:
+            self.topic_queue[topic] = []
+        if msg.payload['seq'] > 1:
             # Build list depending on the number of messages to be received
             # (Number is set by the seq identifier in the json file)
-            if self.topic_queue[topic]:
-                self.topic_queue[topic].append(msg)
-                print(f"[{msg.timestamp}] \
-                    Received message from topic: '{topic}' \n \
-                    Current queue:  {self.topic_queue[topic][-1]}\n")
-        except KeyError:
-            self.topic_queue[topic] = [msg]
-            print(f"[{msg.timestamp}] \
-                Received message from topic: '{topic}' \n \
-                Initiating queue with: {self.topic_queue[topic]}\n")
-        # Waits until queue lenght equals sequence
-        if len(self.topic_queue[topic]) == msg.payload['seq']:
+            msg_queue = self._unpack_sequences(msg)
+            self.topic_queue[topic].extend(msg_queue)
+            print(f"[{datetime.now()}] Initializing execution for topic: '{topic}'\n \
+                    With following queue: {self.topic_queue[topic]}\n")
             success = self._process_message(self.topic_queue[topic],
                                                 topic)
-            if success:
-                self.topic_queue[topic] = []
-        else:
-            if not msg.payload['seq']:
-                print(f"Message without seq param, no command executed \
-                        {msg}\n")
-                self.topic_queue[topic].pop(0)
-            else:
-                print("Continuing with follow message...\n")
-                self.topic_queue[topic].pop(0)
+            if not success:
+                print("There was an error when executing the commands given...\n")
+        elif msg.payload['seq'] == 1:
+            self.topic_queue[topic].extend([msg])
+            print(f"[{datetime.now()}] Initializing execution for topic: '{topic}'\n \
+                    With unique message: {msg}\n")
+            success = self._process_message(self.topic_queue[topic], topic)
+            if not success:
+                print("There was an error when executing the given command...\n")
+        elif not msg.payload['seq']:
+            print(f"Message without seq param, no command executed {msg}\n")
+        print("Continuing with follow message...\n")
 
     def _process_message(self, input_msgs: list[Message], topic_msg: str) \
             -> bool:
         """
         Private method to process a topic queue
         """
-        for individual_msg in input_msgs:
+        for ind in range(len(input_msgs)):
             try:
-                args_load = True if individual_msg.payload['args'] else None
+                args_load = True if input_msgs[ind].payload['args'] else None
             except KeyError:
                 args_load = False
-            answer = self.handler.message_treatment(individual_msg, args_load)
+            answer = self.handler.message_treatment(input_msgs[ind], args_load)
             output = json.dumps(answer)
-            print(f'########################### \n \
-                    Publishing message to topic "{topic_msg}": \t{answer} \
+            print(f'###########################\n \
+                    Output for message sequence #{ind}: {answer} \
                     \n###########################')
-            self.connection.publish(topic=topic_msg, payload=output,
-                                    qos=mqtt.QoS.AT_LEAST_ONCE)
+            if ind == len(input_msgs) - 1:
+                self.connection.publish(topic=topic_msg, payload=output,
+                                        qos=mqtt.QoS.AT_LEAST_ONCE)
         return True
+
+    def _unpack_sequences(self, input_msg: Message) -> list[Message]:
+        """
+        Manager for messages with more than one `seq`
+        """
+        output_queue = []
+        original_id = input_msg.client_id
+        for i in range(0, input_msg.payload['seq'] - 1):
+            new_payload = {'cmd': input_msg.payload['cmd'][i], 'args': input_msg.payload['args'][i]}
+            output_queue.append(Message(client_id=original_id, payload=new_payload))
+        return output_queue
+
 
     def start_logging(self, output_path: str = 'stderr') -> None:
         """
