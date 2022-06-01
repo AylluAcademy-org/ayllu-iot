@@ -7,7 +7,7 @@ from src.iot.tests.extended_devices import TestDeviceCardano
 
 
 def create_message(cmd):
-    return Message(client_id='1', payload=cmd)
+    return Message(message_id='1', payload=cmd)
 
 
 def create_device_cardano():
@@ -73,13 +73,13 @@ def test_message_treatment():
     except ValueError:
         pass
     """
-    output_3 = node.message_treatment(msg_3)
-    output_4 = node.message_treatment(msg_4)
-    output_5 = node.message_treatment(msg_5)
+    output_3 = node.message_treatment(msg_3, True)
+    output_4 = node.message_treatment(msg_4, True)
+    output_5 = node.message_treatment(msg_5, False)
 
-    basic_math_result = {'client_id': '1', 'output_0': 4,
+    basic_math_result = {'msg_id': '1', 'output_0': 4,
                          'output_1': 4, 'output_2': 4}
 
     assert output_3 == basic_math_result
     assert output_4 == basic_math_result
-    assert output_5 == {'client_id': '1', 'status': 'successful'}
+    assert output_5 == {'msg_id': '1', 'status': 'successful'}
