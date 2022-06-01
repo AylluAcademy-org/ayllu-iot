@@ -18,6 +18,6 @@ if __name__ == "__main__":
     if args.provider == 1:
         from iot.aws.service import Runner
         aws_service = Runner()
-        aws_service.run_iot()
+        aws_service.run()
     else:
         raise NotImplementedError("Provide a valid option")

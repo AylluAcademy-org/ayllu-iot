@@ -26,7 +26,7 @@ class Runner:
         self._msg_counter = 0
         self._thing = IotCore(DeviceCardano)
         self._event_thread = Event()
-        self._timer_thread = RepeatTimer(60.0, self._clear_cache)
+        self._timer_thread = RepeatTimer(300.0, self._clear_cache)
 
     @property
     def thing(self):
