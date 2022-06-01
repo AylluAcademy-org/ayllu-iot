@@ -27,7 +27,7 @@ class DeviceCardano(Device):
     _metadata: dict
     _executors: dict
 
-    def __init__(self, id: str, executors_list: list[str] = [],
+    def __init__(self, self_id: str, executors_list: list[str] = [],
                  cardano_configs: Union[str, dict] = None) -> None:
         """
         Constructor for DeviceCardano class.
@@ -37,7 +37,7 @@ class DeviceCardano(Device):
         device_id: str
             Unique identifier for the device.
         """
-        self._device_id = id  # Review if no collision with Thing id
+        self._device_id = self_id
         self._metadata = None
         if executors_list:
             self._executors = self._initialize_classes(executors_list, cardano_configs)
@@ -93,7 +93,7 @@ class DeviceCardano(Device):
             super().validate_inputs(message.payload)
         except AssertionError:
             print('Invalid Message Object')
-        main = {'client_id': message.client_id}
+        main = {'msg_id': message.message_id}
         cmd = message.payload['cmd'].lower()
         func = [getattr(obj, f) for obj, f_list in self._executors.items() for f in f_list if f == cmd][0]
         if not func:

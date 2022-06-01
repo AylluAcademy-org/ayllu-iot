@@ -12,8 +12,8 @@ from abc import ABC
 from typing import Union
 
 from awscrt import io, mqtt, auth  # type: ignore
-from awsiot import mqtt_connection_builder #  type: ignore
-from src.cardano.utils import WORKING_DIR 
+from awsiot import mqtt_connection_builder  # type: ignore
+from src.cardano.utils import WORKING_DIR
 
 # Module imports
 from src.utils.path_utils import file_exists, validate_path
@@ -81,6 +81,8 @@ class IotCore(Thing, Callbacks):
     _connection: mqtt.Connection
     _metadata: dict
     _handler: Device
+    _topic_queue: dict
+    _id_cache: list
 
     def __init__(self, handler_object: Device, config_path: Union[str, dict] = 'config/aws_config.json') -> None:
         """
@@ -95,9 +97,10 @@ class IotCore(Thing, Callbacks):
         self._files_setup(configs)
         if issubclass(handler_object, Device):
             super().__init__()
-            self._handler = handler_object(id="thing-" + str(uuid4()))
+            self._handler = handler_object(self_id="thing-" + str(uuid4()))
             # Pending adding metadata for handler_object
             self.topic_queue = {}
+            self._id_cache = []
             self.connection = self._create_connection()
         else:
             raise TypeError("Provide a valid device handler")
@@ -120,6 +123,26 @@ class IotCore(Thing, Callbacks):
     @property
     def handler(self) -> Device:
         return self._handler
+
+    @property
+    def id_cache(self) -> list[str]:
+        return self._id_cache
+
+    @id_cache.setter
+    def id_cache(self, new_id):
+        if isinstance(new_id, str):
+            self._id_cache.extend([new_id])
+        elif isinstance(new_id, list):
+            self._id_cache.extend(new_id)
+        else:
+            raise TypeError("Provide a valid new_id type")
+
+    @id_cache.deleter
+    def id_cache(self, num: int = -1):
+        if (self.id_cache) and (num == -1):
+            self._id_cache.clear()
+        elif (self.id_cache) and (num >= 0) and (len(self.id_cache) > num+1):
+            del self._id_cache[0: num+1]
 
     def _get_client_id(self) -> str:
         """
@@ -210,60 +233,73 @@ class IotCore(Thing, Callbacks):
         else:
             print("Certificate file already exists\t Skipping step...")
 
-    def manage_messages(self, topic: str, payload: bytes):
+    def manage_messages(self, topic: str, payload: bytes) -> None:
         """
         Method for managing incoming messages onto Thing object
         """
         data = json.loads(payload.decode('utf-8'))
-        assert self._get_client_id() == data['client_id'], "Client missmatch. Input the correct id"
-        msg = Message(client_id=data['client_id'],
-                        payload={k: v for k, v in data.items()
-                                if k != 'client_id'})
-        print(f"[{msg.timestamp}] Received message from topic: '{topic}'")
         try:
-            self.topic_queue[topic].clear()
+            assert self._get_client_id() == data['client_id']
+            queued_topic = f"{topic}-{str(uuid4())}"
+            msg = Message(message_id=queued_topic,
+                          payload={k: v for k, v in data.items()
+                                   if k != 'client_id'})
+            self.topic_queue[queued_topic] = {'incoming': [], 'answers': []}
+            self.id_cache = queued_topic
+            print(f"[{msg.timestamp}] Received message from topic: '{topic}'")
+            if msg.payload['seq'] > 1:
+                # Build list depending on the number of messages to be received
+                # (Number is set by the seq identifier in the json file)
+                msg_queue = self._unpack_sequences(msg)
+                self.topic_queue[queued_topic]['incoming'].extend(msg_queue)
+                print(f"[{datetime.now()}] Initializing sequence execution from: {queued_topic}\n\
+                        Using the following queue: {self.topic_queue[queued_topic]['incoming']}\n")
+                success = self._process_message(queued_topic, topic)
+                if not success:
+                    print("There was an error when executing the commands given...\n")
+            elif msg.payload['seq'] == 1:
+                self.topic_queue[queued_topic]['incoming'].extend([msg])
+                print(f"[{datetime.now()}] Initializing execution from: {queued_topic}\n\
+                        Using the following unique message: {msg}\n")
+                success = self._process_message(queued_topic, topic)
+                if not success:
+                    print("There was an error when executing the given command...\n")
+            elif not msg.payload['seq']:
+                print(f"Message without seq param, no command executed {msg}\n")
+            self.topic_queue.pop(queued_topic)
+            print("Continuing with the following message...\n")
         except KeyError:
-            self.topic_queue[topic] = []
-        if msg.payload['seq'] > 1:
-            # Build list depending on the number of messages to be received
-            # (Number is set by the seq identifier in the json file)
-            msg_queue = self._unpack_sequences(msg)
-            self.topic_queue[topic].extend(msg_queue)
-            print(f"[{datetime.now()}] Initializing execution for topic: '{topic}'\n \
-                    With following queue: {self.topic_queue[topic]}\n")
-            success = self._process_message(self.topic_queue[topic],
-                                                topic)
-            if not success:
-                print("There was an error when executing the commands given...\n")
-        elif msg.payload['seq'] == 1:
-            self.topic_queue[topic].extend([msg])
-            print(f"[{datetime.now()}] Initializing execution for topic: '{topic}'\n \
-                    With unique message: {msg}\n")
-            success = self._process_message(self.topic_queue[topic], topic)
-            if not success:
-                print("There was an error when executing the given command...\n")
-        elif not msg.payload['seq']:
-            print(f"Message without seq param, no command executed {msg}\n")
-        print("Continuing with follow message...\n")
+            if self._filter_queue(data):
+                print("Ommiting message as its a previous published answer...\n")
+            else:
+                print("Invalid message. Please follow the guidelines and send a new request...\n")
+            print("Continuing with the following message...\n")
+        except AssertionError:
+            print('Client missmatch. Please input the correct client id\n\
+                    Continuing with the following message...\n')
 
-    def _process_message(self, input_msgs: list[Message], topic_msg: str) \
-            -> bool:
+    def _process_message(self, msg_topic: str, global_topic: str) -> bool:
         """
         Private method to process a topic queue
         """
-        for ind in range(len(input_msgs)):
+        for num, ind_msg in enumerate(self.topic_queue[msg_topic]['incoming']):
             try:
-                args_load = True if input_msgs[ind].payload['args'] else None
+                args_load = True if ind_msg.payload['args'] else None
             except KeyError:
                 args_load = False
-            answer = self.handler.message_treatment(input_msgs[ind], args_load)
+            answer = self.handler.message_treatment(ind_msg, args_load)
             output = json.dumps(answer)
             print(f'###########################\n \
-                    Output for message sequence #{ind}: {answer} \
+                    Publishign result for message in sequence #{num}: {answer} \
                     \n###########################')
-            if ind == len(input_msgs) - 1:
-                self.connection.publish(topic=topic_msg, payload=output,
-                                        qos=mqtt.QoS.AT_LEAST_ONCE)
+            if answer == {'msg_id': msg_topic}:
+                self.topic_queue[msg_topic]['answers'].extend([Message(message_id=msg_topic,
+                                                                       payload={})])
+            else:
+                self.topic_queue[msg_topic]['answers'].extend([Message(message_id=msg_topic,
+                                                                       payload=answer)])
+            self.connection.publish(topic=global_topic, payload=output,
+                                    qos=mqtt.QoS.AT_LEAST_ONCE)
         return True
 
     def _unpack_sequences(self, input_msg: Message) -> list[Message]:
@@ -271,12 +307,21 @@ class IotCore(Thing, Callbacks):
         Manager for messages with more than one `seq`
         """
         output_queue = []
-        original_id = input_msg.client_id
+        main_id = input_msg.message_id
         for i in range(0, input_msg.payload['seq'] - 1):
             new_payload = {'cmd': input_msg.payload['cmd'][i], 'args': input_msg.payload['args'][i]}
-            output_queue.append(Message(client_id=original_id, payload=new_payload))
+            output_queue.append(Message(message_id=main_id, payload=new_payload))
         return output_queue
 
+    def _filter_queue(self, check_msg: dict) -> bool:
+        """
+        Check for upcoming messages and filter self publish answers 
+        """
+        try:
+            in_queue = True if check_msg['msg_id'] in self.id_cache else False
+        except KeyError:
+            in_queue = False
+        return in_queue
 
     def start_logging(self, output_path: str = 'stderr') -> None:
         """

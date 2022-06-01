@@ -1,52 +1,83 @@
 # General imports
-import threading
+from threading import Event, Timer
+from datetime import datetime
 
 # Module imports
 from src.iot.aws.thing import IotCore
 from src.iot.devices import DeviceCardano
 
-received_count = 0
-received_all_event = threading.Event()
 
-
-def run_iot() -> None:
+class RepeatTimer(Timer):
     """
-    Service definition
+    Timer extension for continous calling
     """
-    # print("Connecting to {} with client ID '{}'...".format(
-    #     endpoint, client_id))
 
-    thing = IotCore(DeviceCardano)
+    def run(self):
+        while not self.finished.wait(self.interval):
+            self.function(*self.args, **self.kwargs)
 
-    thing.start_logging()
 
-    connect_future = thing.connection.connect()
+class Runner:
+    """
+    Execution class for IoT Service
+    """
 
-    # Future.result() waits until a result is available
-    connect_future.result()
-    print("Connected!")
+    def __init__(self):
+        self._msg_counter = 0
+        self._thing = IotCore(DeviceCardano)
+        self._event_thread = Event()
+        self._timer_thread = RepeatTimer(60.0, self._clear_cache)
 
-    # Subscribe
-    # print("Subscribing to topic '{}'...".format(topic))
-    subscribe_future, packet_id = thing.topic_subscription()
+    @property
+    def thing(self):
+        return self._thing
 
-    # subscribe_result = subscribe_future.result()
-    # print("Subscribed with {}".format(str(subscribe_result['qos'])))
-    print("Subscribed!")
+    @property
+    def event_thread(self):
+        return self._event_thread
 
-    # Wait for all messages to be received.
-    # This waits forever if count was set to 0.
-    # if args.count != 0 and not received_all_event.is_set():
-    #     print("Waiting for all messages to be received...")
+    @property
+    def timer_thread(self):
+        return self._timer_thread
 
-    # Prevents the execution of the code below (Disconnet) while
-    # received_all_event flag is False
-    received_all_event.wait()
+    @property
+    def msg_counter(self):
+        return self._msg_counter
 
-    print(f"{received_count} message(s) received.")
+    def _clear_cache(self):
+        if self.msg_counter > 2:
+            print(f"[{datetime.now()}] Cleaning cached messages #{self.msg_counter}...\n")
+            del self.thing.id_cache[self.msg_counter - 1]
+        else:
+            print(f"[{datetime.now()}] Message cache is clean\n")
 
-    # Disconnect
-    print("Disconnecting...")
-    disconnect_future = thing.connection.disconnect()
-    disconnect_future.result()
-    print("Disconnected!")
+    def _initialize_service(self):
+        self.thing.start_logging()
+        # Start connection
+        thing_connection = self.thing.connection.connect()
+        thing_connection.result()
+        print("\nConnected!\n")
+        # Subscribe to topic
+        subscribe_future, packet_id = self.thing.topic_subscription()
+        print("Subscribed!\n")
+
+    def run(self) -> None:
+        """
+        Service definition
+        """
+        # Wait for all messages to be received.
+        # This waits forever if count was set to 0.
+        # if args.count != 0 and not received_all_event.is_set():
+        #     print("Waiting for all messages to be received...")
+
+        # Prevents the execution of the code below (Disconnet) while
+        # received_all_event flag is False
+        self._initialize_service()
+        self.timer_thread.start()
+        self.event_thread.wait()
+
+        # Disconnect
+        print("Disconnecting...")
+        disconnect_future = self.thing.connection.disconnect()
+        disconnect_future.result()
+        print("Disconnected!")

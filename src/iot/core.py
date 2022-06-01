@@ -12,7 +12,7 @@ class Message:
     """
 
     # Implement sort_index
-    client_id: str
+    message_id: str
     payload: dict
     timestamp: datetime = datetime.now()
 
