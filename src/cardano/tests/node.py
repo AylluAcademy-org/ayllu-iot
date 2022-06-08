@@ -39,17 +39,17 @@ address_destin = 'addr_test1qzz7l5yx4pvqcd3lgnay95g7mpn4vfce49htshwtpxw3ypyes4ga
 metadata = {
     "1456": "Hola Mundo"
 }
-address_destin = [
-        {
-          "address": "addr_test1qzz7l5yx4pvqcd3lgnay95g7mpn4vfce49htshwtpxw3ypyes4gaskwme3lygpq6elm702m\
-                        fjcyt257lhz6rs80f0x0s50329z",  # noqa: E501
-          "amount": {
-                "quantity": 5000000,
-                "unit": "lovelace"
-            },
-          "assets": {},
-        },
-      ]
+# address_destin = [
+#         {
+#           "address": "addr_test1qzz7l5yx4pvqcd3lgnay95g7mpn4vfce49htshwtpxw3ypyes4gaskwme3lygpq6elm702m\
+#                         fjcyt257lhz6rs80f0x0s50329z",  # noqa: E501
+#           "amount": {
+#                 "quantity": 5000000,
+#                 "unit": "lovelace"
+#             },
+#           "assets": {},
+#         },
+#       ]
 
 witness = 1
 

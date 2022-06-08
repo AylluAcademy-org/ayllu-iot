@@ -2,7 +2,6 @@
 import os
 import subprocess
 import json
-from typing import Union
 
 # Module imports
 from src.utils.data_utils import load_configs
@@ -27,7 +26,7 @@ class Cardano:
         system needs.
     """
 
-    def __init__(self, configs_set: Union[str, dict] = None):
+    def __init__(self, configs_set=None):
         config_path = CARDANO_CONFIGS if configs_set is None else configs_set
         params = load_configs(config_path, False)
 

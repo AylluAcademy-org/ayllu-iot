@@ -1311,8 +1311,9 @@ class IotExtensions(Node, Wallet):
         id, mnemonic = validate_dict(
             ['id', 'mnemonic'], input_vals
         )
+        return None
 
-    def send_transaction(self, input_vals: dict):
+    def send_transaction_(self, input_vals: dict):
         print('Executing Send Transaction')
         id, data = validate_dict(['id', 'data'], input_vals)
         data["time_to_live"] = {"quantity": 60,

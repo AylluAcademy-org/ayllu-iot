@@ -1,4 +1,3 @@
-from enum import Enum, unique
 from typing import Any, Optional
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -48,7 +47,7 @@ class Device(ABC):
         """
 
     @abstractmethod
-    def message_treatment(self, client_id):
+    def message_treatment(self, message: Message):
         """
         Main function that receives the object from the pubsub and
         defines which function to call and execute
@@ -101,10 +100,11 @@ class Thing(ABC):
     """
     Boilerplate for Thing implementation for different platforms.
     """
-    connection: Any
+    _connection: Any
     _metadata: dict
-    _topic_queaue: dict
+    _topic_queue: dict
     _handler: Device
+    _id_cache: list
 
     @property
     @abstractmethod
@@ -134,7 +134,7 @@ class Thing(ABC):
         """
 
     @abstractmethod
-    def manage_messages(self):
+    def manage_messages(self, topic: str, payload):
         """
         Core function containing message treatment logic
         """

@@ -2,14 +2,13 @@
 import sys
 import os
 import subprocess
-import asyncio.futures as futures
 from uuid import uuid4
 from datetime import datetime
 import json
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # type: ignore
 
 from abc import ABC
-from typing import Union
+from typing import Union, TypeVar, Generic
 
 from awscrt import io, mqtt, auth  # type: ignore
 from awsiot import mqtt_connection_builder  # type: ignore
@@ -23,6 +22,8 @@ from src.iot.core import Message, Device, Thing
 TARGET_FOLDERS = ['cert', 'key', 'root-ca']
 TARGET_AWS = ['AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_REGION']
 AWS_DEFAULTS = ['aws_access_key_id', 'aws_secret_access_key', 'region']
+
+TypeDevice = TypeVar('TypeDevice', bound=Device)
 
 
 class Callbacks(ABC):
@@ -74,17 +75,17 @@ class Callbacks(ABC):
                 sys.exit("Server rejected resubscribe to topic: {t}")
 
 
-class IotCore(Thing, Callbacks):
+class IotCore(Thing, Callbacks, Generic[TypeDevice]):
     """
     Thing object that manages the incoming traffic trough Device objects
     """
     _connection: mqtt.Connection
     _metadata: dict
-    _handler: Device
+    _handler: TypeDevice
     _topic_queue: dict
-    _id_cache: list
+    # _id_cache: list[str]
 
-    def __init__(self, handler_object: Device, config_path: Union[str, dict] = 'config/aws_config.json') -> None:
+    def __init__(self, handler_object, config_path: Union[str, dict] = 'config/aws_config.json'):
         """
         Constructor method for Thing object
 
@@ -97,7 +98,7 @@ class IotCore(Thing, Callbacks):
         self._files_setup(configs)
         if issubclass(handler_object, Device):
             super().__init__()
-            self._handler = handler_object(self_id="thing-" + str(uuid4()))
+            self._handler = handler_object("thing-" + str(uuid4()))
             # Pending adding metadata for handler_object
             self.topic_queue = {}
             self._id_cache = []
@@ -121,15 +122,15 @@ class IotCore(Thing, Callbacks):
         self._topic_queue = new_queue
 
     @property
-    def handler(self) -> Device:
+    def handler(self) -> TypeDevice:
         return self._handler
 
     @property
-    def id_cache(self) -> list[str]:
+    def id_cache(self):
         return self._id_cache
 
     @id_cache.setter
-    def id_cache(self, new_id):
+    def id_cache(self, new_id: Union[str, list[str]]):
         if isinstance(new_id, str):
             self._id_cache.extend([new_id])
         elif isinstance(new_id, list):
@@ -187,8 +188,7 @@ class IotCore(Thing, Callbacks):
             validate_path(self.metadata[f], True, True)
         self._download_certificates(validate_path(self.metadata['root-ca'],
                                     True))
-        if not all(b is True for b in file_exists([self.metadata['cert'],
-                                                   self.metadata['key']])):
+        if not all([file_exists(p) for p in [self.metadata['cert'], self.metadata['key']]]):
             raise FileExistsError("RSA Keys are not available at the indicated\
                                     path")
         env_vars = ['AWS_IOT_ENDPOINT', 'AWS_IOT_PORT', 'AWS_IOT_UID',
@@ -283,11 +283,7 @@ class IotCore(Thing, Callbacks):
         Private method to process a topic queue
         """
         for num, ind_msg in enumerate(self.topic_queue[msg_topic]['incoming']):
-            try:
-                args_load = True if ind_msg.payload['args'] else None
-            except KeyError:
-                args_load = False
-            answer = self.handler.message_treatment(ind_msg, args_load)
+            answer = self.handler.message_treatment(ind_msg)
             output = json.dumps(answer)
             print(f'###########################\n \
                     Publishign result for message in sequence #{num}: {answer} \
@@ -315,7 +311,7 @@ class IotCore(Thing, Callbacks):
 
     def _filter_queue(self, check_msg: dict) -> bool:
         """
-        Check for upcoming messages and filter self publish answers 
+        Check for upcoming messages and filter self publish answers
         """
         try:
             in_queue = True if check_msg['msg_id'] in self.id_cache else False
@@ -330,7 +326,7 @@ class IotCore(Thing, Callbacks):
         no_logs = self.metadata['verbosity']['Info']
         io.init_logging(getattr(io.LogLevel, no_logs), output_path)
 
-    def topic_subscription(self) -> futures.Future.result:
+    def topic_subscription(self) -> tuple[dict, int]:
         """
         Enable subscription for things service
         """

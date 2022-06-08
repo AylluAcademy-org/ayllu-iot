@@ -40,8 +40,8 @@ def test_dc_metadata():
 
     configs = load_cardano_configs()
 
-    assert node_1.metadata is None
-    assert node_2.metadata is None
+    assert node_1.metadata == {}
+    assert node_2.metadata == {}
 
     node_1.metadata = configs
     node_2.metadata = 'config/cardano_config.json'
@@ -73,9 +73,9 @@ def test_message_treatment():
     except ValueError:
         pass
     """
-    output_3 = node.message_treatment(msg_3, True)
-    output_4 = node.message_treatment(msg_4, True)
-    output_5 = node.message_treatment(msg_5, False)
+    output_3 = node.message_treatment(msg_3)
+    output_4 = node.message_treatment(msg_4)
+    output_5 = node.message_treatment(msg_5)
 
     basic_math_result = {'msg_id': '1', 'output_0': 4,
                          'output_1': 4, 'output_2': 4}

@@ -1,6 +1,6 @@
 # General imports
 import json
-from typing import Union
+from typing import Any, Union
 # Package imports
 from src.iot.devices import DeviceCardano
 from src.utils.data_utils import extract_functions, parse_inputs
@@ -11,14 +11,14 @@ class TestDCFuncsOne:
     def __init__(self, input_configs):
         pass
 
-    def basic_math(self, *args, **kwargs) -> list:
+    def basic_math(self, *args, **kwargs):  # -> Union[list[int], tuple]
         """
         return_list: bool, default=False
         """
 
         print('Executing Basic Math')
         print(f"Printing *kwargs: {kwargs}")
-        return_list = parse_inputs(['return_list'], args, kwargs)
+        return_list = parse_inputs(['return_list'], False, args, kwargs)
 
         a = 2 + 2
         b = 2 * 2
@@ -74,7 +74,7 @@ class TestDeviceCardano(DeviceCardano):
         super().__init__(self_id=device_id, executors_list=['TestDCFuncsOne', 'TestDCFuncsTwo'])
 
     def _initialize_classes(self, classes_list: list, set_configs: Union[str, dict]) -> dict:
-        initialized_objects = {}
+        initialized_objects: dict[Any, list[str]] = {}
         for obj in classes_list:
             if obj == 'TestDCFuncsOne':
                 funcs_one = TestDCFuncsOne(set_configs)
