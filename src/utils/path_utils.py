@@ -95,14 +95,16 @@ def validate_path(input_path: str, use_root: bool = False, exists: bool = False)
 def _find_path(starting_path: str, target_path: str) -> str:
     # To-do: It needs to verify if the starting_path is not already contain
     # in the target path before going trough os.listdir()
+    return_path: str
     try:
         if target_path.split('/')[0] in os.listdir(starting_path):
-            return f"{starting_path}/{target_path}"
+            return_path = f"{starting_path}/{target_path}"
         else:
             new_start = f"{starting_path}/{target_path.split('/')[0]}"
             _find_path(new_start, '/'.join(target_path.split('/')[1:]))
     except IndexError:
         raise KeyError("The provided path was not found in the Library folder")
+    return return_path
 
 
 def only_folder_path(input_str: str) -> str:
@@ -166,8 +168,7 @@ def remove_folder(target_path: Union[str, list]) -> None:
             logging.info("Folder %s did not exists", only_folder)
 
 
-def file_exists(target_path: Union[str, list], is_absolute: bool = False) \
-        -> Union[bool, list]:
+def file_exists(target_path: Union[str, list], is_absolute: bool = False):
     """
     Verify wether a file exists or not
     """

@@ -1,54 +1,97 @@
 # General imports
-import threading
+from threading import Event, Timer
+from datetime import datetime
 
 # Module imports
 from src.iot.aws.thing import IotCore
 from src.iot.devices import DeviceCardano
 
-received_count = 0
-received_all_event = threading.Event()
 
-
-def run_iot() -> None:
+class RepeatTimer(Timer):
     """
-    Service definition
+    Timer extension for continous calling
     """
-    # print("Connecting to {} with client ID '{}'...".format(
-    #     endpoint, client_id))
 
-    thing = IotCore(DeviceCardano)
+    def run(self):
+        while not self.finished.wait(self.interval):
+            self.function(*self.args, **self.kwargs)
 
-    print(f"Device Created: {thing.get_client_id()}")
 
-    thing.start_logging()
+class Runner:
+    """
+    Execution class for IoT Service
+    """
 
-    connect_future = thing.connection.connect()
+    def __init__(self):
+        self._thing = IotCore(DeviceCardano)
+        self._event_thread = Event()
+        self._cache_timer = RepeatTimer(300.0, self._clear_cache)
+        self._queue_timer = RepeatTimer(3600.0, self._clear_remnants)
 
-    # Future.result() waits until a result is available
-    connect_future.result()
-    print("Connected!")
+    @property
+    def thing(self):
+        return self._thing
 
-    # Subscribe
-    # print("Subscribing to topic '{}'...".format(topic))
-    subscribe_future, packet_id = thing.topic_subscription()
+    @property
+    def event_thread(self):
+        return self._event_thread
 
-    # subscribe_result = subscribe_future.result()
-    # print("Subscribed with {}".format(str(subscribe_result['qos'])))
-    print("Subscribed!")
+    @property
+    def cache_timer(self):
+        return self._cache_timer
 
-    # Wait for all messages to be received.
-    # This waits forever if count was set to 0.
-    # if args.count != 0 and not received_all_event.is_set():
-    #     print("Waiting for all messages to be received...")
+    @property
+    def queue_timer(self):
+        return self._queue_timer
 
-    # Prevents the execution of the code below (Disconnet) while
-    # received_all_event flag is False
-    received_all_event.wait()
+    def _clear_cache(self):
+        msg_counter = len(self.thing.id_cache)
+        if msg_counter > 2:
+            print(f"[{datetime.now()}] Cleaning cached messages #{msg_counter}...\n")
+            del self.thing.id_cache[msg_counter]
+        else:
+            print(f"[{datetime.now()}] Message cache is clean\n")
 
-    print(f"{received_count} message(s) received.")
+    def _clear_remnants(self):
+        to_clean = [topic for topic, cache in self.thing.topic_queue.items()
+                    if self._time_diff(cache['start_time']) >= 1]
+        print(f"[{datetime.now()}] Executing clean up of Queues for {len(to_clean)} topics...\n")
+        for remnant in to_clean:
+            self.thing.topic_queue.pop(remnant)
+            print(f"[{datetime.now()}] Topic {remnant} erased...\n")
 
-    # Disconnect
-    print("Disconnecting...")
-    disconnect_future = thing.connection.disconnect()
-    disconnect_future.result()
-    print("Disconnected!")
+    def _time_diff(self, start_time: datetime):
+        diff = datetime.now() - start_time
+        return diff.days
+
+    def _initialize_service(self):
+        self.thing.start_logging()
+        # Start connection
+        thing_connection = self.thing.connection.connect()
+        thing_connection.result()
+        print("\nConnected!\n")
+        # Subscribe to topic
+        subscribe_future, packet_id = self.thing.topic_subscription()
+        print("Subscribed!\n")
+
+    def run(self) -> None:
+        """
+        Service definition
+        """
+        # Wait for all messages to be received.
+        # This waits forever if count was set to 0.
+        # if args.count != 0 and not received_all_event.is_set():
+        #     print("Waiting for all messages to be received...")
+
+        # Prevents the execution of the code below (Disconnet) while
+        # received_all_event flag is False
+        self._initialize_service()
+        self.cache_timer.start()
+        self.queue_timer.start()
+        self.event_thread.wait()
+
+        # Disconnect
+        print("Disconnecting...")
+        disconnect_future = self.thing.connection.disconnect()
+        disconnect_future.result()
+        print("Disconnected!")

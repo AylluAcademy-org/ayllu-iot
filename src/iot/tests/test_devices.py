@@ -7,7 +7,7 @@ from src.iot.tests.extended_devices import TestDeviceCardano
 
 
 def create_message(cmd):
-    return Message(client_id='1', payload=cmd)
+    return Message(message_id='1', payload=cmd)
 
 
 def create_device_cardano():
@@ -40,8 +40,8 @@ def test_dc_metadata():
 
     configs = load_cardano_configs()
 
-    assert node_1.metadata is None
-    assert node_2.metadata is None
+    assert node_1.metadata == {}
+    assert node_2.metadata == {}
 
     node_1.metadata = configs
     node_2.metadata = 'config/cardano_config.json'
@@ -77,9 +77,9 @@ def test_message_treatment():
     output_4 = node.message_treatment(msg_4)
     output_5 = node.message_treatment(msg_5)
 
-    basic_math_result = {'client_id': '1', 'output_0': 4,
+    basic_math_result = {'message_id': '1', 'output_0': 4,
                          'output_1': 4, 'output_2': 4}
 
     assert output_3 == basic_math_result
     assert output_4 == basic_math_result
-    assert output_5 == {'client_id': '1', 'status': 'successful'}
+    assert output_5 == {'message_id': '1', 'status': 'successful'}

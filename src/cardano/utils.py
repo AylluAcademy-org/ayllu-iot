@@ -5,7 +5,11 @@ import json
 
 # Module imports
 from src.utils.data_utils import load_configs
-from src.utils.path_utils import remove_folder, save_file, validate_path, create_folder, remove_file
+from src.utils.path_utils import get_root_path, remove_folder, save_file, validate_path, \
+    create_folder, remove_file
+
+WORKING_DIR = get_root_path()
+CARDANO_CONFIGS = f'{WORKING_DIR}/config/cardano_config.json'
 
 
 class Cardano:
@@ -22,7 +26,8 @@ class Cardano:
         system needs.
     """
 
-    def __init__(self, config_path):
+    def __init__(self, configs_set=None):
+        config_path = CARDANO_CONFIGS if configs_set is None else configs_set
         params = load_configs(config_path, False)
 
         self.CARDANO_NETWORK_MAGIC = params['node']['CARDANO_NETWORK_MAGIC']

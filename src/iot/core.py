@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -11,7 +11,7 @@ class Message:
     """
 
     # Implement sort_index
-    client_id: str
+    message_id: str
     payload: dict
     timestamp: datetime = datetime.now()
 
@@ -47,14 +47,14 @@ class Device(ABC):
         """
 
     @abstractmethod
-    def message_treatment(self, client_id):
+    def message_treatment(self, message: Message):
         """
         Main function that receives the object from the pubsub and
         defines which function to call and execute
         """
 
     @staticmethod
-    def validate_message(input_msg: Message) -> Optional[AssertionError]:
+    def validate_message(input_msg: Message):
         """
         Validate if each inputed message is an object of class Message
 
@@ -62,19 +62,12 @@ class Device(ABC):
         ----------
         message: iot.core.Message
             Message object with enough information for its operation
-
-        Returns
-        ------
-        result: Optional[AssertionError]
-            Indicator wether the message is valid or not
         """
-        if isinstance(input_msg, Message):
-            return None
-        else:
-            return AssertionError("The message is not of valid type")
+        if not isinstance(input_msg, Message):
+            raise TypeError("The message type is not valid\n")
 
     @staticmethod
-    def validate_inputs(inputs) -> Optional[AssertionError]:
+    def validate_inputs(inputs):
         """
         Validate the inputs from a Message being passed down to the
         function call
@@ -83,27 +76,20 @@ class Device(ABC):
         ----------
         inputs: dict
             Input arguments for function call
-
-        Returns
-        -------
-        result: Optional[AssertionError]
-            Indicator wether the inputs are valid or no
         """
-        if isinstance(inputs, dict):
-            return None
-        else:
-            return AssertionError("The body of the message is not a \
-                                dictionary")
+        if not isinstance(inputs, dict):
+            raise AssertionError("The body of the message is not a dictionary")
 
 
 class Thing(ABC):
     """
     Boilerplate for Thing implementation for different platforms.
     """
-    connection: Any
+    _connection: Any
     _metadata: dict
-    _topic_queaue: dict
+    _topic_queue: dict
     _handler: Device
+    _id_cache: list
 
     @property
     @abstractmethod
@@ -133,7 +119,7 @@ class Thing(ABC):
         """
 
     @abstractmethod
-    def manage_messages(self):
+    def manage_messages(self, topic: str, payload):
         """
         Core function containing message treatment logic
         """

@@ -1,49 +1,49 @@
 # General imports
 import json
+from typing import Any, Union
 # Package imports
 from src.iot.devices import DeviceCardano
-from src.utils.data_utils import parse_inputs
+from src.utils.data_utils import extract_functions, parse_inputs
 
 
-def basic_math(*args, **kwargs) -> list:
-    """
-    return_list: bool, default=False
-    """
+class TestDCFuncsOne:
 
-    print('Executing Basic Math')
-    print(f"Printing *kwargs: {kwargs}")
-    return_list = parse_inputs(['return_list'], args, kwargs)
+    def __init__(self, input_configs):
+        pass
 
-    a = 2 + 2
-    b = 2 * 2
-    c = 2 ** 2
+    def basic_math(self, *args, **kwargs):  # -> Union[list[int], tuple]
+        """
+        return_list: bool, default=False
+        """
 
-    if return_list:
-        return [a, b, c]
-    else:
-        return (a, b, c)
+        print('Executing Basic Math')
+        print(f"Printing *kwargs: {kwargs}")
+        return_list = parse_inputs(['return_list'], False, args, kwargs)
 
+        a = 2 + 2
+        b = 2 * 2
+        c = 2 ** 2
 
-def basic_dict() -> dict:
-    """
-    """
-    return {'status': 'successful'}
-
-
-def basic_json(input_dict: dict):
-    """
-    """
-    return json.dumps(input_dict)
+        if return_list:
+            return [a, b, c]
+        else:
+            return (a, b, c)
 
 
-TestDeviceCardanoFunctionsOne = {
-    'BASIC_MATH': basic_math
-}
+class TestDCFuncsTwo:
 
-TestDeviceCardanoFunctionsTwo = {
-    'BASIC_DICT': basic_dict,
-    'BASIC_JSON': basic_json
-}
+    def __init__(self, input_configs):
+        pass
+
+    def basic_dict(self) -> dict:
+        """
+        """
+        return {'status': 'successful'}
+
+    def basic_json(self, input_dict: dict):
+        """
+        """
+        return json.dumps(input_dict)
 
 
 class TestDeviceCardano(DeviceCardano):
@@ -71,6 +71,17 @@ class TestDeviceCardano(DeviceCardano):
         device_id: str
             Unique identifier for the device.
         """
-        super().__init__(id=device_id,
-                         functions=[TestDeviceCardanoFunctionsOne,
-                                    TestDeviceCardanoFunctionsTwo])
+        super().__init__(self_id=device_id, executors_list=['TestDCFuncsOne', 'TestDCFuncsTwo'])
+
+    def _initialize_classes(self, classes_list: list, set_configs: Union[str, dict]) -> dict:
+        initialized_objects: dict[Any, list[str]] = {}
+        for obj in classes_list:
+            if obj == 'TestDCFuncsOne':
+                funcs_one = TestDCFuncsOne(set_configs)
+                initialized_objects[funcs_one] = extract_functions(funcs_one)
+            elif obj == 'TestDCFuncsTwo':
+                funcs_two = TestDCFuncsTwo(set_configs)
+                initialized_objects[funcs_two] = extract_functions(funcs_two)
+            else:
+                raise KeyError('Specified object is not implemented for this Device')
+        return initialized_objects

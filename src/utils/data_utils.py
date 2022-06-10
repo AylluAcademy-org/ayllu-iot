@@ -1,6 +1,6 @@
 # General imports
 import logging
-from typing import Optional, Union
+from typing import Union
 import json
 
 # Module imports
@@ -63,8 +63,7 @@ def validate_vars(keywords: list, input_vars: dict, mandatory: bool = False) -> 
     return result
 
 
-def validate_dict(keywords: list, vals: Union[str, dict]) \
-        -> Union[dict, list]:
+def validate_dict(keywords: list, vals: Union[str, dict]):
     """
     Complementing `validate_vars` and implemented
     at `parse_inputs`.
@@ -72,20 +71,23 @@ def validate_dict(keywords: list, vals: Union[str, dict]) \
     if isinstance(vals, str):
         try:
             with open(vals) as f:
-                from_json = json.load(f)
-                return from_json
+                output = json.load(f)
+                return output
         except FileNotFoundError:
             try:
-                from_json = json.loads(vals)
-                return from_json
+                output = json.loads(vals)
+                return output
             except TypeError:
                 print('Provide a valid format for JSON.')
+                return None
     else:
         try:
-            return [val for arg in vals for name, val in arg.items()
-                    if name in keywords]
+            output = [val for arg in vals for name, val in arg.items()
+                      if name in keywords]
+            return output
         except AttributeError:
             print('Provide a valid input')
+            return None
 
 
 def parse_inputs(keywords: list, fill: bool = False, *args, **kwargs):
@@ -102,23 +104,32 @@ def parse_inputs(keywords: list, fill: bool = False, *args, **kwargs):
         return validate_vars(keywords, kwargs, fill)
 
 
-def load_configs(vals: Union[str, dict], full_flat: bool) -> Optional[dict]:
+def load_configs(vals: Union[str, dict], full_flat: bool) -> dict:
     """
     Loads configuration files into a dictionary to be use for reading configs
     """
+    output: dict
     if isinstance(vals, str):
         try:
             with open(validate_path(vals, False)) as file:
                 output = json.load(file)
                 if check_nested_dicts(output):
                     output = flatten_dict(output, full_flat)
-            return output
         except FileNotFoundError:
             logging.error('The provided file was not found')
     elif isinstance(vals, dict):
         output = vals
         if check_nested_dicts(output):
             output = flatten_dict(output, full_flat)
-        return output
     else:
-        logging.error('Not supported configuration\'s input')
+        raise TypeError('Not supported configuration\'s input')
+    return output
+
+
+def extract_functions(input_class):
+    """
+    Get functions list from a given class object
+    """
+    raw_methods = dir(input_class)
+    return [func for func in raw_methods if callable(getattr(input_class, func))
+            and func.startswith('_') is False]

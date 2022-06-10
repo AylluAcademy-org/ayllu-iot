@@ -13,15 +13,13 @@ import subprocess
 from base64 import b16encode
 from itertools import groupby
 from operator import itemgetter
+from typing import Union
 import requests
 
 # Module Imports
 from src.cardano.utils import Cardano
 from src.utils.data_utils import validate_dict, parse_inputs
-from src.utils.path_utils import get_root_path,  create_folder, save_file, remove_file
-
-WORKING_DIR = get_root_path()
-CARDANO_CONFIGS = f'{WORKING_DIR}/config/cardano_config.json'
+from src.utils.path_utils import create_folder, save_file, remove_file
 
 
 class Node(Cardano):
@@ -29,8 +27,8 @@ class Node(Cardano):
     Class using primarly Cardano CLI commands
     """
 
-    def __init__(self, config_path=CARDANO_CONFIGS):
-        super().__init__(config_path=config_path)
+    def __init__(self, input_configs: Union[str, dict] = None):
+        super().__init__(input_configs)
 
     def insert_command(self, index, step, command_string, opt_commands):
         """
@@ -644,8 +642,8 @@ class Wallet(Cardano):
 
     """
 
-    def __init__(self, config_path=CARDANO_CONFIGS):
-        super().__init__(config_path=config_path)
+    def __init__(self, input_configs: Union[str, dict] = None):
+        super().__init__(input_configs)
 
     def list_wallets(self):
         """Return a list of known wallets, ordered from oldest to newest.
@@ -781,8 +779,8 @@ class Wallet(Cardano):
 
 
 class Keys(Cardano):
-    def __init__(self, config_path=CARDANO_CONFIGS):
-        super().__init__(config_path=config_path)
+    def __init__(self, input_configs: Union[str, dict] = None):
+        super().__init__(input_configs)
         self.path = self.KEYS_FILE_PATH
         self.cardano_network = self.CARDANO_NETWORK
         self.cardano_network_magic = self.CARDANO_NETWORK_MAGIC
@@ -1288,8 +1286,8 @@ class Keys(Cardano):
 
 
 class IotExtensions(Node, Wallet):
-    def __init__(self, config_path=CARDANO_CONFIGS):
-        super().__init__(config_path=config_path)
+    def __init__(self, input_configs: Union[str, dict] = None):
+        super().__init__(input_configs)
 
     def get_wallet_info(self, input_vals: dict) -> dict:
         print('Executing Wallet Info')
@@ -1313,8 +1311,9 @@ class IotExtensions(Node, Wallet):
         id, mnemonic = validate_dict(
             ['id', 'mnemonic'], input_vals
         )
+        return None
 
-    def send_transaction(self, input_vals: dict):
+    def send_transaction_(self, input_vals: dict):
         print('Executing Send Transaction')
         id, data = validate_dict(['id', 'data'], input_vals)
         data["time_to_live"] = {"quantity": 60,
