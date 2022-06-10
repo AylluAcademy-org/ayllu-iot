@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -54,7 +54,7 @@ class Device(ABC):
         """
 
     @staticmethod
-    def validate_message(input_msg: Message) -> Optional[AssertionError]:
+    def validate_message(input_msg: Message):
         """
         Validate if each inputed message is an object of class Message
 
@@ -62,19 +62,12 @@ class Device(ABC):
         ----------
         message: iot.core.Message
             Message object with enough information for its operation
-
-        Returns
-        ------
-        result: Optional[AssertionError]
-            Indicator wether the message is valid or not
         """
-        if isinstance(input_msg, Message):
-            return None
-        else:
-            return AssertionError("The message is not of valid type")
+        if not isinstance(input_msg, Message):
+            raise TypeError("The message type is not valid\n")
 
     @staticmethod
-    def validate_inputs(inputs) -> Optional[AssertionError]:
+    def validate_inputs(inputs):
         """
         Validate the inputs from a Message being passed down to the
         function call
@@ -83,17 +76,9 @@ class Device(ABC):
         ----------
         inputs: dict
             Input arguments for function call
-
-        Returns
-        -------
-        result: Optional[AssertionError]
-            Indicator wether the inputs are valid or no
         """
-        if isinstance(inputs, dict):
-            return None
-        else:
-            return AssertionError("The body of the message is not a \
-                                dictionary")
+        if not isinstance(inputs, dict):
+            raise AssertionError("The body of the message is not a dictionary")
 
 
 class Thing(ABC):

@@ -77,9 +77,9 @@ def test_message_treatment():
     output_4 = node.message_treatment(msg_4)
     output_5 = node.message_treatment(msg_5)
 
-    basic_math_result = {'msg_id': '1', 'output_0': 4,
+    basic_math_result = {'message_id': '1', 'output_0': 4,
                          'output_1': 4, 'output_2': 4}
 
     assert output_3 == basic_math_result
     assert output_4 == basic_math_result
-    assert output_5 == {'msg_id': '1', 'status': 'successful'}
+    assert output_5 == {'message_id': '1', 'status': 'successful'}

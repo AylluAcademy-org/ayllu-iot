@@ -23,10 +23,10 @@ class Runner:
     """
 
     def __init__(self):
-        self._msg_counter = 0
         self._thing = IotCore(DeviceCardano)
         self._event_thread = Event()
-        self._timer_thread = RepeatTimer(300.0, self._clear_cache)
+        self._cache_timer = RepeatTimer(300.0, self._clear_cache)
+        self._queue_timer = RepeatTimer(3600.0, self._clear_remnants)
 
     @property
     def thing(self):
@@ -37,19 +37,32 @@ class Runner:
         return self._event_thread
 
     @property
-    def timer_thread(self):
-        return self._timer_thread
+    def cache_timer(self):
+        return self._cache_timer
 
     @property
-    def msg_counter(self):
-        return self._msg_counter
+    def queue_timer(self):
+        return self._queue_timer
 
     def _clear_cache(self):
-        if self.msg_counter > 2:
-            print(f"[{datetime.now()}] Cleaning cached messages #{self.msg_counter}...\n")
-            del self.thing.id_cache[self.msg_counter - 1]
+        msg_counter = len(self.thing.id_cache)
+        if msg_counter > 2:
+            print(f"[{datetime.now()}] Cleaning cached messages #{msg_counter}...\n")
+            del self.thing.id_cache[msg_counter]
         else:
             print(f"[{datetime.now()}] Message cache is clean\n")
+
+    def _clear_remnants(self):
+        to_clean = [topic for topic, cache in self.thing.topic_queue.items()
+                    if self._time_diff(cache['start_time']) >= 1]
+        print(f"[{datetime.now()}] Executing clean up of Queues for {len(to_clean)} topics...\n")
+        for remnant in to_clean:
+            self.thing.topic_queue.pop(remnant)
+            print(f"[{datetime.now()}] Topic {remnant} erased...\n")
+
+    def _time_diff(self, start_time: datetime):
+        diff = datetime.now() - start_time
+        return diff.days
 
     def _initialize_service(self):
         self.thing.start_logging()
@@ -73,7 +86,8 @@ class Runner:
         # Prevents the execution of the code below (Disconnet) while
         # received_all_event flag is False
         self._initialize_service()
-        self.timer_thread.start()
+        self.cache_timer.start()
+        self.queue_timer.start()
         self.event_thread.wait()
 
         # Disconnect

@@ -87,12 +87,9 @@ class DeviceCardano(Device):
             Information containing the results of the command
             passed down through the message.
         """
-        try:
-            super().validate_message(message)
-            super().validate_inputs(message.payload)
-        except AssertionError:
-            print('Invalid Message Object')
-        main = {'msg_id': message.message_id}
+        super().validate_message(message)
+        super().validate_inputs(message.payload)
+        main = {'message_id': message.message_id}
         cmd = message.payload['cmd'].lower()
         func = [getattr(obj, f) for obj, f_list in self._executors.items() for f in f_list if f == cmd][0]
         if not func:

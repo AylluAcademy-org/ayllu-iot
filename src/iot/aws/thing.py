@@ -25,6 +25,13 @@ AWS_DEFAULTS = ['aws_access_key_id', 'aws_secret_access_key', 'region']
 
 TypeDevice = TypeVar('TypeDevice', bound=Device)
 
+MESSAGE_TEMPLATE = {'client_id': 'Here goes the device id', 'seq': 'Number of messages [an integer higher than zero]',
+                    'cmd': '[Here goes a valid function name for this thing device, ...]',
+                    'args (optional)': '[{Only if: the function requires it}, ...]'}
+WARNING_TEMPLATE = f"Please follow the guidelines: {MESSAGE_TEMPLATE}\n\
+                    Note that if any of your commands has an argument you have to fill with `null` \
+                    the rest of the list to make it clear which correspond to which!\nTry sending a new request...\n"
+
 
 class Callbacks(ABC):
     """
@@ -142,8 +149,10 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
     def id_cache(self, num: int = -1):
         if (self.id_cache) and (num == -1):
             self._id_cache.clear()
-        elif (self.id_cache) and (num >= 0) and (len(self.id_cache) > num+1):
-            del self._id_cache[0: num+1]
+        elif (num >= 0) and (len(self.id_cache) >= num):
+            del self._id_cache[0: num]
+        else:
+            raise KeyError("Provide a valid number to delete")
 
     def _get_client_id(self) -> str:
         """
@@ -238,47 +247,34 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         Method for managing incoming messages onto Thing object
         """
         data = json.loads(payload.decode('utf-8'))
-        try:
-            assert self._get_client_id() == data['client_id']
-            queued_topic = f"{topic}-{str(uuid4())}"
-            msg = Message(message_id=queued_topic,
-                          payload={k: v for k, v in data.items()
-                                   if k != 'client_id'})
-            self.topic_queue[queued_topic] = {'incoming': [], 'answers': []}
-            self.id_cache = queued_topic
-            print(f"[{msg.timestamp}] Received message from topic: '{topic}'")
-            if msg.payload['seq'] > 1:
-                # Build list depending on the number of messages to be received
-                # (Number is set by the seq identifier in the json file)
-                msg_queue = self._unpack_sequences(msg)
-                self.topic_queue[queued_topic]['incoming'].extend(msg_queue)
-                print(f"[{datetime.now()}] Initializing sequence execution from: {queued_topic}\n\
-                        Using the following queue: {self.topic_queue[queued_topic]['incoming']}\n")
-                success = self._process_message(queued_topic, topic)
-                if not success:
-                    print("There was an error when executing the commands given...\n")
-            elif msg.payload['seq'] == 1:
-                self.topic_queue[queued_topic]['incoming'].extend([msg])
-                print(f"[{datetime.now()}] Initializing execution from: {queued_topic}\n\
-                        Using the following unique message: {msg}\n")
-                success = self._process_message(queued_topic, topic)
-                if not success:
-                    print("There was an error when executing the given command...\n")
-            elif not msg.payload['seq']:
-                print(f"Message without seq param, no command executed {msg}\n")
-            self.topic_queue.pop(queued_topic)
-            print("Continuing with the following message...\n")
-        except KeyError:
-            if self._filter_queue(data):
-                print("Ommiting message as its a previous published answer...\n")
+        if not self._filter_queue(data):
+            if 'client_id' in data.keys():
+                try:
+                    assert self._get_client_id() == data['client_id']
+                    queued_topic = f"{topic}-{str(uuid4())}"
+                    msg = Message(message_id=queued_topic,
+                                  payload={k: v for k, v in data.items()
+                                           if k != 'client_id'})
+                    msg_queue = self._unpack_payload(msg)
+                    if msg_queue:
+                        print(f"[{msg.timestamp}] Received message from topic: '{queued_topic}'")
+                        self.topic_queue[queued_topic] = {'incoming': [], 'answers': [], 'start_time': msg.timestamp}
+                        self.topic_queue[queued_topic]['incoming'].extend(msg_queue)
+                        print(f"[{datetime.now()}] Initializing sequence execution from: {queued_topic}\n\
+                                Using the following queue: {self.topic_queue[queued_topic]['incoming']}\n")
+                        self._process_message(queued_topic, topic)
+                        self.id_cache = queued_topic
+                        self.topic_queue.pop(queued_topic)
+                        print(f"Done with execution for {queued_topic}. Continuing with the following message...\n")
+                except AssertionError:
+                    print('Client missmatch. Please input the correct client id\n\
+                            Continuing with the following message...\n')
             else:
-                print("Invalid message. Please follow the guidelines and send a new request...\n")
-            print("Continuing with the following message...\n")
-        except AssertionError:
-            print('Client missmatch. Please input the correct client id\n\
-                    Continuing with the following message...\n')
+                raise KeyError(f"Missing `client_id`. {WARNING_TEMPLATE}")
+        else:
+            print("Ommiting message as it's part of a sequence in execution...\n")
 
-    def _process_message(self, msg_topic: str, global_topic: str) -> bool:
+    def _process_message(self, msg_topic: str, global_topic: str):
         """
         Private method to process a topic queue
         """
@@ -296,25 +292,70 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
                                                                        payload=answer)])
             self.connection.publish(topic=global_topic, payload=output,
                                     qos=mqtt.QoS.AT_LEAST_ONCE)
-        return True
 
-    def _unpack_sequences(self, input_msg: Message) -> list[Message]:
+    def _unpack_payload(self, input_msg: Message) -> list[Message]:
         """
-        Manager for messages with more than one `seq`
+        Preprocessing for upcoming messages. Build a list depending on the number of messages to be processed.
+        This number is set by the `seq` identifier in the json payload.
         """
         output_queue = []
         main_id = input_msg.message_id
-        for i in range(0, input_msg.payload['seq'] - 1):
-            new_payload = {'cmd': input_msg.payload['cmd'][i], 'args': input_msg.payload['args'][i]}
-            output_queue.append(Message(message_id=main_id, payload=new_payload))
+        validation_result = self._validate_payload(input_msg)
+        new_payloads = self._repackage_payload(input_msg.payload)
+        if validation_result and new_payloads != [{}]:
+            if input_msg.payload['seq'] > 1:
+                for i in range(0, input_msg.payload['seq']):
+                    output_queue.append(Message(message_id=main_id, payload=new_payloads[i]))
+            elif input_msg.payload['seq'] == 1:
+                output_queue.append(Message(message_id=main_id, payload=new_payloads[0]))
         return output_queue
+
+    def _validate_payload(self, input_payload: Message) -> bool:
+        """
+        Checks for required parameters in message payload
+        """
+        payload_keys = input_payload.payload.keys()
+        if 'seq' not in payload_keys:
+            raise TypeError(f'Invalid message. `seq` is not included in the Message. {WARNING_TEMPLATE}')
+        elif input_payload.payload['seq'] < 1:
+            raise TypeError(f'Invalide message. `seq` cannot be a negative value nor zero. {WARNING_TEMPLATE}')
+        elif ('cmd' not in payload_keys):
+            raise TypeError(f'Parameter `cmd` was not found. {WARNING_TEMPLATE}')
+        elif ('cmd' in payload_keys) and not isinstance(input_payload.payload['cmd'], list):
+            raise TypeError(f'Invalid message. `cmd` is not as expected. {WARNING_TEMPLATE}')
+        try:
+            assert len(input_payload.payload['cmd']) == (input_payload.payload['seq'])
+        except AssertionError:
+            print('The sequence given does not match with the number of commands\n')
+        return True
+
+    def _repackage_payload(self, input_payload: dict) -> list[dict]:
+        output_payloads: list[dict] = [{}]
+        try:
+            assert len(input_payload['cmd']) == len(input_payload['args'])
+            if len(input_payload['cmd']) > 1:
+                output_payloads = [{'cmd': input_payload['cmd'][i], 'args': input_payload['args'][i]}
+                                   for i in range(0, len(input_payload['cmd']))]
+            else:
+                output_payloads = [{'cmd': input_payload['cmd'][0], 'args': input_payload['args'][0]}]
+        except KeyError:
+            if len(input_payload['cmd']) > 1:
+                output_payloads = [{'cmd': input_payload['cmd'][i], 'args': None}
+                                   for i in range(0, len(input_payload['cmd']))]
+            else:
+                output_payloads = [{'cmd': input_payload['cmd'][0], 'args': None}]
+        except AssertionError:
+            print(f'The number of `cmd` does not correspond with the number of `args`. {WARNING_TEMPLATE}')
+        except TypeError:
+            print(f"The format of `args` is not as expected. {WARNING_TEMPLATE}")
+        return output_payloads
 
     def _filter_queue(self, check_msg: dict) -> bool:
         """
         Check for upcoming messages and filter self publish answers
         """
         try:
-            in_queue = True if check_msg['msg_id'] in self.id_cache else False
+            in_queue = check_msg['message_id'] in self.topic_queue.keys()
         except KeyError:
             in_queue = False
         return in_queue
