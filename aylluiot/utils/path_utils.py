@@ -20,7 +20,7 @@ def get_root_path() -> str:
     working_dir: str
         Full path to working directory
     """
-    root_dir_name = 'ayllu-pycardano'
+    root_dir_name = 'ayllu-iot'
     root_path = ''
     path_list = str(Path(__file__)).split('/')
     index = 0
@@ -71,16 +71,21 @@ def join_paths(left_side: str, right_side: str):
     return f"{n_left}/{n_right}"
 
 
-def validate_path(input_path: str, use_root: bool = False, exists: bool = False) -> str:
+def validate_path(
+        input_path: str,
+        use_root: bool = False,
+        exists: bool = False) -> str:
     """
     Turn a relative path into an absolute one or returns one path that could
     be left joined with a parent path
     """
     if input_path.split('/')[0] == '.' or input_path.split('/')[0] == '..':
         if use_root and exists:
-            return _find_path(get_root_path(), '/'.join(input_path.split('/')[1:]))
+            return _find_path(get_root_path(),
+                              '/'.join(input_path.split('/')[1:]))
         elif use_root and not exists:
-            return join_paths(get_root_path(), '/'.join(input_path.split('/')[1:]))
+            return join_paths(get_root_path(),
+                              '/'.join(input_path.split('/')[1:]))
         else:
             return '/'.join(input_path.split('/')[1:])
     else:
@@ -190,10 +195,10 @@ def save_file(target_path: str, file_name: str, content: str) -> None:
     Saves strings to a file specified by inputed path
     """
     create_folder(target_path)
-    with open(target_path+file_name, 'w') as file:
+    with open(target_path + file_name, 'w') as file:
         file.write(str(content))
 
 
 def remove_file(path: str, name: str) -> None:
-    if os.path.exists(path+name):
-        os.remove(path+name)
+    if os.path.exists(path + name):
+        os.remove(path + name)

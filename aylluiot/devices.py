@@ -1,10 +1,9 @@
 # General Imports
 import json
-from typing import Any, Union
+from typing import Union
 # Module Imports
-from src.iot.core import Device, Message
-from src.cardano.base import Wallet, Node, Keys, IotExtensions
-from src.utils.data_utils import load_configs, extract_functions
+from aylluiot.core import Device, Message
+from aylluiot.utils.data_utils import load_configs
 
 
 class DeviceCardano(Device):
@@ -27,7 +26,7 @@ class DeviceCardano(Device):
     _metadata: dict
     _executors: dict  # type: ignore
 
-    def __init__(self, self_id: str, executors_list=[], cardano_configs=None) -> None:
+    def __init__(self, self_id: str, executors_list=[], configs=None) -> None:
         """
         Constructor for DeviceCardano class.
 
@@ -39,10 +38,9 @@ class DeviceCardano(Device):
         self._device_id = self_id
         self._metadata = {}
         if executors_list:
-            self._executors = self._initialize_classes(executors_list, cardano_configs)
+            self._executors = self._initialize_classes(executors_list, configs)
         else:
-            self._executors = self._initialize_classes(["Keys", "Wallet",
-                                                        "Node", "IotExtensions"], cardano_configs)
+            self._executors = self._initialize_classes([], configs)
         super().__init__()
         print(f"Device Created: {self.device_id}")
 
@@ -91,7 +89,8 @@ class DeviceCardano(Device):
         super().validate_inputs(message.payload)
         main = {'message_id': message.message_id}
         cmd = message.payload['cmd'].lower()
-        func = [getattr(obj, f) for obj, f_list in self._executors.items() for f in f_list if f == cmd][0]
+        func = [getattr(obj, f) for obj, f_list in self._executors.items()
+                for f in f_list if f == cmd][0]
         if not func:
             raise ValueError("The specified command does not exists")
         try:
@@ -99,7 +98,9 @@ class DeviceCardano(Device):
         except KeyError:
             has_args = False
         if has_args:
-            print(f"Executing function: {func} \nWith parameters: {message.payload['args']}")
+            print(
+                f"Executing function: {func} \nWith parameters: \
+                    {message.payload['args']}")
             params = func(message.payload['args'])
         else:
             print(f"Executing function: {func}")
@@ -117,24 +118,28 @@ class DeviceCardano(Device):
                 print("There was an error returning your result")
         return main
 
-    def _initialize_classes(self, classes_list: list, set_configs: Union[str, dict]) -> dict:
+    def _initialize_classes(self, classes_list: list,
+                            set_configs: Union[str, dict]) -> dict:
         """
         Load necessary objects for runtime executions on data threatment
         """
-        initialized_objects: dict[Any, list[str]] = {}
-        for obj in classes_list:
-            if obj == 'Node':
-                node = Node(set_configs)
-                initialized_objects[node] = extract_functions(node)
-            elif obj == 'Wallet':
-                wallet = Wallet(set_configs)
-                initialized_objects[wallet] = extract_functions(wallet)
-            elif obj == 'Keys':
-                keys = Keys(set_configs)
-                initialized_objects[keys] = extract_functions(keys)
-            elif obj == 'IotExtensions':
-                iot_extensions = IotExtensions(set_configs)
-                initialized_objects[iot_extensions] = extract_functions(iot_extensions)
-            else:
-                raise KeyError('Specified object is not implemented for this Device')
-        return initialized_objects
+        return {}
+        # initialized_objects: dict[Any, list[str]] = {}
+        # for obj in classes_list:
+        #     if obj == 'Node':
+        #         node = Node(set_configs)
+        #         initialized_objects[node] = extract_functions(node)
+        #     elif obj == 'Wallet':
+        #         wallet = Wallet(set_configs)
+        #         initialized_objects[wallet] = extract_functions(wallet)
+        #     elif obj == 'Keys':
+        #         keys = Keys(set_configs)
+        #         initialized_objects[keys] = extract_functions(keys)
+        #     elif obj == 'IotExtensions':
+        #         iot_extensions = IotExtensions(set_configs)
+        #         initialized_objects[iot_extensions] \
+        #                   = extract_functions(iot_extensions)
+        #     else:
+        #         raise KeyError('Specified object is not \
+        #                           implemented for this Device')
+        # return initialized_objects

@@ -3,10 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "CardanoPython"
-version = "0.0.1a"
-description = "Python Module to Interact with Cardano Functionalities on trough different integrations"
+name = "AylluIoT"
+version = "1.0.0"
+description = "Python Library to run an IoT system."
 readme = "README.md"
-
-[tool.mypy]
-exclude = ["/app\\.py$"]

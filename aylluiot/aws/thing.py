@@ -14,10 +14,11 @@ from awscrt import io, mqtt, auth  # type: ignore
 from awsiot import mqtt_connection_builder  # type: ignore
 
 # Module imports
-from src.cardano.utils import WORKING_DIR
-from src.utils.path_utils import file_exists, validate_path
-from src.utils.data_utils import load_configs
-from src.iot.core import Message, Device, Thing
+from aylluiot.utils.path_utils import file_exists, validate_path, get_root_path
+from aylluiot.utils.data_utils import load_configs
+from aylluiot.core import Message, Device, Thing
+
+WORKING_DIR = get_root_path()
 
 TARGET_FOLDERS = ['cert', 'key', 'root-ca']
 TARGET_AWS = ['AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_REGION']
@@ -25,12 +26,15 @@ AWS_DEFAULTS = ['aws_access_key_id', 'aws_secret_access_key', 'region']
 
 TypeDevice = TypeVar('TypeDevice', bound=Device)
 
-MESSAGE_TEMPLATE = {'client_id': 'Here goes the device id', 'seq': 'Number of messages [an integer higher than zero]',
-                    'cmd': '[Here goes a valid function name for this thing device, ...]',
-                    'args (optional)': '[{Only if: the function requires it}, ...]'}
+MESSAGE_TEMPLATE = {
+    'client_id': 'Here goes the device id',
+    'seq': 'Number of messages [an integer higher than zero]',
+    'cmd': '[Here goes a valid function name for this thing device, ...]',
+    'args (optional)': '[{Only if: the function requires it}, ...]'}
 WARNING_TEMPLATE = f"Please follow the guidelines: {MESSAGE_TEMPLATE}\n\
-                    Note that if any of your commands has an argument you have to fill with `null` \
-                    the rest of the list to make it clear which correspond to which!\nTry sending a new request...\n"
+            Note that if any of your commands has an argument you \
+            have to fill with `null` the rest of the list to make it \
+            clear which correspond to which!\nTry sending a new request...\n"
 
 
 class Callbacks(ABC):
@@ -92,7 +96,10 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
     _topic_queue: dict
     # _id_cache: list[str]
 
-    def __init__(self, handler_object, config_path: Union[str, dict] = 'config/aws_config.json'):
+    def __init__(self,
+                 handler_object,
+                 config_path: Union[str,
+                                    dict] = 'config/aws_config.json'):
         """
         Constructor method for Thing object
 
@@ -101,7 +108,8 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         """
         load_dotenv()
         configs = config_path \
-            if config_path != "config/aws_config.json" else f'{WORKING_DIR}/{config_path}'
+            if config_path != "config/aws_config.json" else \
+            f'{WORKING_DIR}/{config_path}'
         self._files_setup(configs)
         if issubclass(handler_object, Device):
             super().__init__()
@@ -197,7 +205,8 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
             validate_path(self.metadata[f], True, True)
         self._download_certificates(validate_path(self.metadata['root-ca'],
                                     True))
-        if not all([file_exists(p) for p in [self.metadata['cert'], self.metadata['key']]]):
+        if not all([file_exists(p)
+                   for p in [self.metadata['cert'], self.metadata['key']]]):
             raise FileExistsError("RSA Keys are not available at the indicated\
                                     path")
         env_vars = ['AWS_IOT_ENDPOINT', 'AWS_IOT_PORT', 'AWS_IOT_UID',
@@ -257,22 +266,34 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
                                            if k != 'client_id'})
                     msg_queue = self._unpack_payload(msg)
                     if msg_queue:
-                        print(f"[{msg.timestamp}] Received message from topic: '{queued_topic}'")
-                        self.topic_queue[queued_topic] = {'incoming': [], 'answers': [], 'start_time': msg.timestamp}
-                        self.topic_queue[queued_topic]['incoming'].extend(msg_queue)
-                        print(f"[{datetime.now()}] Initializing sequence execution from: {queued_topic}\n\
-                                Using the following queue: {self.topic_queue[queued_topic]['incoming']}\n")
+                        print(
+                            f"[{msg.timestamp}] Received message from topic: \
+                                '{queued_topic}'")
+                        self.topic_queue[queued_topic] = {
+                            'incoming': [], 'answers': [],
+                            'start_time': msg.timestamp}
+                        self.topic_queue[queued_topic]['incoming'].extend(
+                            msg_queue)
+                        print(
+                            f"[{datetime.now()}] Initializing sequence \
+                            execution from: {queued_topic}\n\
+                            Using the following queue: \
+                            {self.topic_queue[queued_topic]['incoming']}\n")
                         self._process_message(queued_topic, topic)
                         self.id_cache = queued_topic
                         self.topic_queue.pop(queued_topic)
-                        print(f"Done with execution for {queued_topic}. Continuing with the following message...\n")
+                        print(
+                            f"Done with execution for {queued_topic}. \
+                                Continuing with the following message...\n")
                 except AssertionError:
-                    print('Client missmatch. Please input the correct client id\n\
-                            Continuing with the following message...\n')
+                    print(
+                        'Client missmatch. Please input the correct client \
+                            id\nContinuing with the following message...\n')
             else:
                 raise KeyError(f"Missing `client_id`. {WARNING_TEMPLATE}")
         else:
-            print("Ommiting message as it's part of a sequence in execution...\n")
+            print("Ommiting message as it's part of a sequence in \
+                execution...\n")
 
     def _process_message(self, msg_topic: str, global_topic: str):
         """
@@ -282,20 +303,21 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
             answer = self.handler.message_treatment(ind_msg)
             output = json.dumps(answer)
             print(f'###########################\n \
-                    Publishign result for message in sequence #{num}: {answer} \
+                    Publishign result for message in sequence #{num}: {answer}\
                     \n###########################')
             if answer == {'msg_id': msg_topic}:
-                self.topic_queue[msg_topic]['answers'].extend([Message(message_id=msg_topic,
-                                                                       payload={})])
+                self.topic_queue[msg_topic]['answers'].extend(
+                    [Message(message_id=msg_topic, payload={})])
             else:
-                self.topic_queue[msg_topic]['answers'].extend([Message(message_id=msg_topic,
-                                                                       payload=answer)])
+                self.topic_queue[msg_topic]['answers'].extend(
+                    [Message(message_id=msg_topic, payload=answer)])
             self.connection.publish(topic=global_topic, payload=output,
                                     qos=mqtt.QoS.AT_LEAST_ONCE)
 
     def _unpack_payload(self, input_msg: Message) -> list[Message]:
         """
-        Preprocessing for upcoming messages. Build a list depending on the number of messages to be processed.
+        Preprocessing for upcoming messages. Build a list depending on the
+        number of messages to be processed.
         This number is set by the `seq` identifier in the json payload.
         """
         output_queue = []
@@ -305,9 +327,15 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         if validation_result and new_payloads != [{}]:
             if input_msg.payload['seq'] > 1:
                 for i in range(0, input_msg.payload['seq']):
-                    output_queue.append(Message(message_id=main_id, payload=new_payloads[i]))
+                    output_queue.append(
+                        Message(
+                            message_id=main_id,
+                            payload=new_payloads[i]))
             elif input_msg.payload['seq'] == 1:
-                output_queue.append(Message(message_id=main_id, payload=new_payloads[0]))
+                output_queue.append(
+                    Message(
+                        message_id=main_id,
+                        payload=new_payloads[0]))
         return output_queue
 
     def _validate_payload(self, input_payload: Message) -> bool:
@@ -316,17 +344,28 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         """
         payload_keys = input_payload.payload.keys()
         if 'seq' not in payload_keys:
-            raise TypeError(f'Invalid message. `seq` is not included in the Message. {WARNING_TEMPLATE}')
+            raise TypeError(
+                f'Invalid message. `seq` is not included in the Message. \
+                    {WARNING_TEMPLATE}')
         elif input_payload.payload['seq'] < 1:
-            raise TypeError(f'Invalide message. `seq` cannot be a negative value nor zero. {WARNING_TEMPLATE}')
+            raise TypeError(
+                f'Invalide message. `seq` cannot be a negative value nor zero.\
+                    {WARNING_TEMPLATE}')
         elif ('cmd' not in payload_keys):
-            raise TypeError(f'Parameter `cmd` was not found. {WARNING_TEMPLATE}')
-        elif ('cmd' in payload_keys) and not isinstance(input_payload.payload['cmd'], list):
-            raise TypeError(f'Invalid message. `cmd` is not as expected. {WARNING_TEMPLATE}')
+            raise TypeError(
+                f'Parameter `cmd` was not found. {WARNING_TEMPLATE}')
+        elif ('cmd' in payload_keys) and \
+                not isinstance(input_payload.payload['cmd'], list):
+            raise TypeError(
+                f'Invalid message. `cmd` is not as expected. \
+                    {WARNING_TEMPLATE}')
         try:
-            assert len(input_payload.payload['cmd']) == (input_payload.payload['seq'])
+            assert len(
+                input_payload.payload['cmd']) == (
+                input_payload.payload['seq'])
         except AssertionError:
-            print('The sequence given does not match with the number of commands\n')
+            print('The sequence given does not match with the number of \
+                commands\n')
         return True
 
     def _repackage_payload(self, input_payload: dict) -> list[dict]:
@@ -334,20 +373,29 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         try:
             assert len(input_payload['cmd']) == len(input_payload['args'])
             if len(input_payload['cmd']) > 1:
-                output_payloads = [{'cmd': input_payload['cmd'][i], 'args': input_payload['args'][i]}
-                                   for i in range(0, len(input_payload['cmd']))]
+                output_payloads = [
+                    {'cmd': input_payload['cmd'][i],
+                     'args': input_payload['args'][i]}
+                    for i in range(0, len(input_payload['cmd']))]
             else:
-                output_payloads = [{'cmd': input_payload['cmd'][0], 'args': input_payload['args'][0]}]
+                output_payloads = [
+                    {'cmd': input_payload['cmd'][0],
+                        'args': input_payload['args'][0]}]
         except KeyError:
             if len(input_payload['cmd']) > 1:
-                output_payloads = [{'cmd': input_payload['cmd'][i], 'args': None}
-                                   for i in range(0, len(input_payload['cmd']))]
+                output_payloads = [
+                    {'cmd': input_payload['cmd'][i], 'args': None}
+                    for i in range(0, len(input_payload['cmd']))]
             else:
-                output_payloads = [{'cmd': input_payload['cmd'][0], 'args': None}]
+                output_payloads = [
+                    {'cmd': input_payload['cmd'][0], 'args': None}]
         except AssertionError:
-            print(f'The number of `cmd` does not correspond with the number of `args`. {WARNING_TEMPLATE}')
+            print(
+                f'The number of `cmd` does not correspond with the number \
+                    of `args`. {WARNING_TEMPLATE}')
         except TypeError:
-            print(f"The format of `args` is not as expected. {WARNING_TEMPLATE}")
+            print(
+                f"The format of `args` is not as expected. {WARNING_TEMPLATE}")
         return output_payloads
 
     def _filter_queue(self, check_msg: dict) -> bool:

@@ -3,8 +3,8 @@ from threading import Event, Timer
 from datetime import datetime
 
 # Module imports
-from src.iot.aws.thing import IotCore
-from src.iot.devices import DeviceCardano
+from aylluiot.aws.thing import IotCore
+from aylluiot.devices import DeviceCardano
 
 
 class RepeatTimer(Timer):
@@ -47,7 +47,8 @@ class Runner:
     def _clear_cache(self):
         msg_counter = len(self.thing.id_cache)
         if msg_counter > 2:
-            print(f"[{datetime.now()}] Cleaning cached messages #{msg_counter}...\n")
+            print(f"[{datetime.now()}] Cleaning cached messages \
+                    #{msg_counter}...\n")
             del self.thing.id_cache[msg_counter]
         else:
             print(f"[{datetime.now()}] Message cache is clean\n")
@@ -55,7 +56,9 @@ class Runner:
     def _clear_remnants(self):
         to_clean = [topic for topic, cache in self.thing.topic_queue.items()
                     if self._time_diff(cache['start_time']) >= 1]
-        print(f"[{datetime.now()}] Executing clean up of Queues for {len(to_clean)} topics...\n")
+        print(
+            f"[{datetime.now()}] Executing clean up of Queues for \
+                {len(to_clean)} topics...\n")
         for remnant in to_clean:
             self.thing.topic_queue.pop(remnant)
             print(f"[{datetime.now()}] Topic {remnant} erased...\n")

@@ -32,5 +32,4 @@ dmypy.json
 .vscode/
 
 #Others
-.priv/
 .certificates/

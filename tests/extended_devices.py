@@ -2,8 +2,8 @@
 import json
 from typing import Any, Union
 # Package imports
-from src.iot.devices import DeviceCardano
-from src.utils.data_utils import extract_functions, parse_inputs
+from aylluiot.devices import DeviceCardano
+from aylluiot.utils.data_utils import extract_functions, parse_inputs
 
 
 class TestDCFuncsOne:
@@ -71,9 +71,14 @@ class TestDeviceCardano(DeviceCardano):
         device_id: str
             Unique identifier for the device.
         """
-        super().__init__(self_id=device_id, executors_list=['TestDCFuncsOne', 'TestDCFuncsTwo'])
+        super().__init__(
+            self_id=device_id,
+            executors_list=[
+                'TestDCFuncsOne',
+                'TestDCFuncsTwo'])
 
-    def _initialize_classes(self, classes_list: list, set_configs: Union[str, dict]) -> dict:
+    def _initialize_classes(self, classes_list: list,
+                            set_configs: Union[str, dict]) -> dict:
         initialized_objects: dict[Any, list[str]] = {}
         for obj in classes_list:
             if obj == 'TestDCFuncsOne':
@@ -83,5 +88,6 @@ class TestDeviceCardano(DeviceCardano):
                 funcs_two = TestDCFuncsTwo(set_configs)
                 initialized_objects[funcs_two] = extract_functions(funcs_two)
             else:
-                raise KeyError('Specified object is not implemented for this Device')
+                raise KeyError(
+                    'Specified object is not implemented for this Device')
         return initialized_objects

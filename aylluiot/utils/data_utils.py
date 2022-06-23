@@ -4,7 +4,7 @@ from typing import Union
 import json
 
 # Module imports
-from src.utils.path_utils import validate_path
+from aylluiot.utils.path_utils import validate_path
 
 
 def check_nested_dicts(vals: dict):
@@ -39,7 +39,10 @@ def flatten_dict(input_dict, deep: bool = False):
     return dict(output)
 
 
-def validate_vars(keywords: list, input_vars: dict, mandatory: bool = False) -> list:
+def validate_vars(
+        keywords: list,
+        input_vars: dict,
+        mandatory: bool = False) -> list:
     """
     Complementing `validate_dict` and implemented
     at `parse_inputs`.
@@ -131,5 +134,8 @@ def extract_functions(input_class):
     Get functions list from a given class object
     """
     raw_methods = dir(input_class)
-    return [func for func in raw_methods if callable(getattr(input_class, func))
-            and func.startswith('_') is False]
+    return [
+        func for func in raw_methods if callable(
+            getattr(
+                input_class,
+                func)) and func.startswith('_') is False]

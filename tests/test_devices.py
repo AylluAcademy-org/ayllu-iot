@@ -1,9 +1,8 @@
 # General imports
 import json
 # Package imports
-from src.utils.test_utils import load_cardano_configs
-from src.iot.core import Message
-from src.iot.tests.extended_devices import TestDeviceCardano
+from aylluiot.core import Message
+from tests.extended_devices import TestDeviceCardano
 
 
 def create_message(cmd):
@@ -14,40 +13,14 @@ def create_device_cardano():
     return TestDeviceCardano('T')
 
 
-def dc_metadata_assertions(configs_dict: dict, dc_object: TestDeviceCardano):
-    """
-    """
-    CARDANO_NETWORK_MAGIC = configs_dict['node']['CARDANO_NETWORK_MAGIC']
-    CARDANO_CLI_PATH = configs_dict['node']['CARDANO_CLI_PATH']
-    CARDANO_NETWORK = configs_dict['node']['CARDANO_NETWORK']
-    TRANSACTION_PATH_FILE = configs_dict['node']['TRANSACTION_PATH_FILE']
-    KEYS_FILE_PATH = configs_dict['node']['KEYS_FILE_PATH']
-    URL = configs_dict['node']['URL']
-
-    assert dc_object.metadata['CARDANO_NETWORK_MAGIC'] == CARDANO_NETWORK_MAGIC
-    assert dc_object.metadata['CARDANO_CLI_PATH'] == CARDANO_CLI_PATH
-    assert dc_object.metadata['CARDANO_NETWORK'] == CARDANO_NETWORK
-    assert dc_object.metadata['TRANSACTION_PATH_FILE'] == TRANSACTION_PATH_FILE
-    assert dc_object.metadata['KEYS_FILE_PATH'] == KEYS_FILE_PATH
-    assert dc_object.metadata['URL'] == URL
-
-
 def test_dc_metadata():
     """
     """
     node_1 = create_device_cardano()
     node_2 = create_device_cardano()
 
-    configs = load_cardano_configs()
-
     assert node_1.metadata == {}
     assert node_2.metadata == {}
-
-    node_1.metadata = configs
-    node_2.metadata = 'config/cardano_config.json'
-
-    dc_metadata_assertions(configs, node_1)
-    dc_metadata_assertions(configs, node_2)
 
 
 def test_message_treatment():

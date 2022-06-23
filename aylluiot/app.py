@@ -2,7 +2,7 @@
 import argparse
 
 # Module imports
-from utils.path_utils import set_working_path
+from aylluiot.utils.path_utils import set_working_path
 
 set_working_path()
 
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.provider == 1:
-        from iot.aws.service import Runner
+        from aylluiot.aws.service import Runner
         aws_service = Runner()
         aws_service.run()
     else:
