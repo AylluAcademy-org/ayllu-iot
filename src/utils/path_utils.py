@@ -20,7 +20,7 @@ def get_root_path() -> str:
     working_dir: str
         Full path to working directory
     """
-    root_dir_name = 'CardanoPython'
+    root_dir_name = 'ayllu-pycardano'
     root_path = ''
     path_list = str(Path(__file__)).split('/')
     index = 0

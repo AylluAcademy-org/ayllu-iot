@@ -5,16 +5,16 @@ import subprocess
 from uuid import uuid4
 from datetime import datetime
 import json
-from dotenv import load_dotenv  # type: ignore
 
 from abc import ABC
 from typing import Union, TypeVar, Generic
 
+from dotenv import load_dotenv  # type: ignore
 from awscrt import io, mqtt, auth  # type: ignore
 from awsiot import mqtt_connection_builder  # type: ignore
-from src.cardano.utils import WORKING_DIR
 
 # Module imports
+from src.cardano.utils import WORKING_DIR
 from src.utils.path_utils import file_exists, validate_path
 from src.utils.data_utils import load_configs
 from src.iot.core import Message, Device, Thing
