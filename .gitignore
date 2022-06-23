@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__
+
+# Unit test
+.cache
+.pytest_cache/
+
+# Build
+*.egg-info
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# tox
+.tox
+
+# vscode
+.vscode/
+
+#Others
+.priv/
+.certificates/

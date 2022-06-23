@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "CardanoPython"
+version = "0.0.1a"
+description = "Python Module to Interact with Cardano Functionalities on trough different integrations"
+readme = "README.md"
+
+[tool.mypy]
+exclude = ["/app\\.py$"]

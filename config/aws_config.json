@@ -1,0 +1,16 @@
+{
+    "AWS_IOT": {
+        "cert": "../.certificates/test_device.pem.crt",
+        "key": "../.certificates/test_device.private.key",
+        "root-ca": "../.certificates/root-CA.crt",
+        "verbosity":{
+            "NoLogs":"NoLogs",
+            "Fatal":"Fatal",
+            "Error":"Error",
+            "Warn":"Warn",
+            "Info":"Info",
+            "Debug":"Debug",
+            "Trace":"Trace"
+        }
+    }
+}
