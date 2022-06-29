@@ -1,15 +1,54 @@
+"""
+Utils submodule for data preprocessing and other data related operations.
+"""
+
 # General imports
 import logging
-from typing import Union
+from typing import Any, Union, Optional
 import json
 
 # Module imports
 from aylluiot.utils.path_utils import validate_path
 
 
-def check_nested_dicts(vals: dict):
+def check_for_json(input_str: str) -> Union[dict, str]:
+    """
+    Determines if a string is just a string or can be load as dict.
+
+    Parameters
+    ----------
+    input_str: str
+        THe input string to be check.
+
+    Returns
+    -------
+    out: Union[dict, str]
+        Returns a dict if is possible to decode the string as JSON else returns
+        the same string.
+    """
+    if isinstance(input_str, str):
+        try:
+            out = json.loads(input_str)
+        except json.JSONDecodeError:
+            out = input_str
+    else:
+        raise TypeError(f'The input {input_str} is not a string.')
+    return out
+
+
+def check_nested_dicts(vals: dict) -> bool:
     """
     Check if a dictionary is nested.
+
+    Parameters
+    ---------
+    vals: dict
+        The dictionary to be checked if its nested or not.
+
+    Returns
+    ------
+    bool
+        Either `True` or `False` if the dictionary is nested or not.
     """
     if any(isinstance(v, dict) for v in vals.values()):
         return True
@@ -17,9 +56,21 @@ def check_nested_dicts(vals: dict):
         return False
 
 
-def flatten_dict(input_dict, deep: bool = False):
+def flatten_dict(input_dict: dict, deep: Optional[bool] = False) -> dict:
     """
     Reduce dictionary to only one nested level
+
+    Parameters
+    ----------
+    input_dict: dict
+        The dictionary to be flatten.
+    deep: Optional[bool], default = False
+        If the dictionary should have at least one nested level or not.
+
+    Returns
+    -------
+    dict
+        The resulting flattened dictionary.
     """
     output = []
     for key, val in input_dict.items():
@@ -39,77 +90,128 @@ def flatten_dict(input_dict, deep: bool = False):
     return dict(output)
 
 
-def validate_vars(
-        keywords: list,
-        input_vars: dict,
-        mandatory: bool = False) -> list:
+def upack_kwargs(vals: dict, keywords: list,
+                 fill: Optional[bool] = True) -> dict:
     """
-    Complementing `validate_dict` and implemented
-    at `parse_inputs`.
+    Unpack a set of **kwargs given based on a set of keywords provided.
 
-    TO DO:
-    Missing to annotate/distinguish between optional and necessary arguments
+    Parameters
+    ----------
+    vals: dict
+        `**kwargs` comming down from the function call. 
+    keywords: Optional[list], default = []
+        Set of target variables to look for.
+    fill: bool, default = True
+        If a set of keywords are given and you want to unpack that specific
+        number of variables, you can fill them with `None`.
+
+    Returns
+    -------
+    result: dict
+        Resulting dictionary of unpackage process.
     """
-    result = []
-    for key, val in input_vars.items():
-        try:
-            assert val is not None and key in keywords
-            result.append(val)
-        except AssertionError:
-            if mandatory:
-                print(f'Provide a valid input for {key}')
-                result = []
-                break
-            else:
-                result.append(None)
-                continue
+    result = {}
+    if not vals:
+        return result
+    for key, val in vals.items():
+        if isinstance(val, str) and key in keywords:
+            result[key] = check_for_json(val)
+        elif not isinstance(val, str) and key in keywords:
+            result[key] = val
+    diff = set(keywords).difference(set(result.keys()))
+    if (len(diff) > 0) and fill:
+        for key in diff:
+            result[key] = None
     return result
 
 
-def validate_dict(keywords: list, vals: Union[str, dict]):
+def unpack_args(vals: tuple[Any], keywords: list,
+                fill: Optional[bool] = True) -> dict:
     """
-    Complementing `validate_vars` and implemented
-    at `parse_inputs`.
+    Unpack a set of *args given based on a set of keywords provided.
+
+    Parameters
+    ----------
+    vals: tuple[Any]
+        `*args` comming down from the function call. 
+    keywords: Optional[list], default = []
+        Set of target variables to look for.
+    fill: bool, default = True
+        If a set of keywords are given and you want to unpack that specific
+        number of variables, you can fill them with `None`.
+
+    Returns
+    -------
+    output: dict
+        Resulting dictionary of unpackage process.
     """
-    if isinstance(vals, str):
-        try:
-            with open(vals) as f:
-                output = json.load(f)
-                return output
-        except FileNotFoundError:
-            try:
-                output = json.loads(vals)
-                return output
-            except TypeError:
-                print('Provide a valid format for JSON.')
-                return None
+    output = {}
+    if not vals:
+        return output
+    elif len(keywords) < len(vals):
+        _vars = vals[:int(len(keywords) - len(vals))]
     else:
+        _vars = vals
+    for i in range(len(keywords)):
         try:
-            output = [val for arg in vals for name, val in arg.items()
-                      if name in keywords]
-            return output
-        except AttributeError:
-            print('Provide a valid input')
-            return None
+            if isinstance(_vars[i], str):
+                output[keywords[i]] = check_for_json(_vars[i])
+            else:
+                output[keywords[i]] = _vars[i]
+        except IndexError:
+            if fill:
+                output[keywords[i]] = None
+            else:
+                break
+    return output
 
 
-def parse_inputs(keywords: list, fill: bool = False, *args, **kwargs):
+def parse_inputs(keywords: list[str], strict: bool = False, *args, **kwargs) \
+        -> list:
     """
-    Parse the input for Cardano objects functions.
+    Parse *args and **kwargs for a functions that requires specific variables
+    to work.
+
+    Parameters
+    ---------
+    keywords: list[str]
+        List of variable names to look for.
+    strict: bool, default = False
+        Signal if all the keywords must have a value other than `None`.
+    *args , **kwargs
+        Refers to all the values to be passed down this function.
+
+    Returns
+    -------
+    list
+        Resulting list of values that can be unpacked onto local variables.
     """
     if args:
-        output = validate_dict(keywords, args[0])
-        if isinstance(output, dict):
-            return [val for key, val in output.items()]
-        else:
-            return output
-    else:
-        return validate_vars(keywords, kwargs, fill)
+        _args = unpack_args(args, keywords)
+    elif kwargs:
+        _kwargs = upack_kwargs(kwargs, keywords)
+    stage = flatten_dict({**_args, **_kwargs})
+    if strict and (set(stage.keys()) != set(keywords)):
+        raise KeyError(f'The following requested keywords are missing: \
+            {set(stage.keys()).difference(set(keywords))}')
+    return [stage[k] for k in keywords]
 
 
 def load_configs(vals: Union[str, dict], full_flat: bool) -> dict:
     """
     Loads configuration files into a dictionary to be use for reading configs
+
+    Parameters
+    ----------
+    vals: Union[str, dict]
+        Input parameter to load configurations.
+    full_flat: bool
+        If the output dictionary should contain only one level or not.
+
+    Returns
+    -------
+    dict:
+        The loaded dictionary containing the key, value from the given input.
     """
     output: dict
     if isinstance(vals, str):
@@ -129,13 +231,30 @@ def load_configs(vals: Union[str, dict], full_flat: bool) -> dict:
     return output
 
 
-def extract_functions(input_class):
+def extract_functions(input_class: Any, built_ins: bool = False) -> list[str]:
     """
     Get functions list from a given class object
+
+    Parameters
+    ---------
+    input_class: Any
+        The given object to be used.
+    built_ins: bool, default = False
+        Either to accept or not built-in objects such as `int` or `str`.
+
+    Returns
+    -------
+    list[str]
+        List of public methods name for the given object.
     """
-    raw_methods = dir(input_class)
-    return [
-        func for func in raw_methods if callable(
-            getattr(
-                input_class,
+    if built_ins:
+        raw_methods = dir(input_class)
+    else:
+        raw_methods = dir(input_class) if type(input_class) not in \
+            [str, int, float, list, dict, tuple, set] else None
+    try:
+        return [func for func in raw_methods if callable(getattr(input_class,
                 func)) and func.startswith('_') is False]
+    except TypeError:
+        logging.error('The given class is a built-in type. Either change the\
+            function call to accept built_ins or provide other input class.')
