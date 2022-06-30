@@ -7,3 +7,6 @@ name = "AylluIoT"
 version = "1.0.0"
 description = "Python Library to run an IoT system."
 readme = "README.md"
+
+[tool.setuptools]
+packages = ["aylluiot"]
