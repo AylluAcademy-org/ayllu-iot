@@ -72,7 +72,7 @@ def flatten_dict(input_dict: dict, deep: Optional[bool] = False) -> dict:
     dict
         The resulting flattened dictionary.
     """
-    output = []
+    output: list[tuple[Any, Any]] = []
     for key, val in input_dict.items():
         if deep:
             try:
@@ -90,15 +90,15 @@ def flatten_dict(input_dict: dict, deep: Optional[bool] = False) -> dict:
     return dict(output)
 
 
-def upack_kwargs(vals: dict, keywords: list,
-                 fill: Optional[bool] = True) -> dict:
+def unpack_kwargs(vals: dict, keywords: list,
+                  fill: Optional[bool] = True) -> dict:
     """
     Unpack a set of **kwargs given based on a set of keywords provided.
 
     Parameters
     ----------
     vals: dict
-        `**kwargs` comming down from the function call. 
+        `**kwargs` comming down from the function call.
     keywords: Optional[list], default = []
         Set of target variables to look for.
     fill: bool, default = True
@@ -110,7 +110,7 @@ def upack_kwargs(vals: dict, keywords: list,
     result: dict
         Resulting dictionary of unpackage process.
     """
-    result = {}
+    result: dict[Any, Any] = {}
     if not vals:
         return result
     for key, val in vals.items():
@@ -126,7 +126,7 @@ def upack_kwargs(vals: dict, keywords: list,
     return result
 
 
-def unpack_args(vals: tuple[Any], keywords: list,
+def unpack_args(vals: tuple, keywords: list,
                 fill: Optional[bool] = True) -> dict:
     """
     Unpack a set of *args given based on a set of keywords provided.
@@ -134,7 +134,7 @@ def unpack_args(vals: tuple[Any], keywords: list,
     Parameters
     ----------
     vals: tuple[Any]
-        `*args` comming down from the function call. 
+        `*args` comming down from the function call.
     keywords: Optional[list], default = []
         Set of target variables to look for.
     fill: bool, default = True
@@ -146,7 +146,7 @@ def unpack_args(vals: tuple[Any], keywords: list,
     output: dict
         Resulting dictionary of unpackage process.
     """
-    output = {}
+    output: dict[Any, Any] = {}
     if not vals:
         return output
     elif len(keywords) < len(vals):
@@ -197,8 +197,8 @@ def _clear_duplicates(input_val: dict) -> dict:
 
 
 def parse_inputs(keywords: list[str], strict: bool = False,
-                 _args: Optional[tuple] = (),
-                 _kwargs: Optional[dict] = {}) -> list:
+                 _args: Optional[tuple[Any]] = None,
+                 _kwargs: Optional[dict[Any, Any]] = None) -> list:
     """
     Parse *args and **kwargs for a functions that requires specific variables
     to work.
@@ -217,8 +217,17 @@ def parse_inputs(keywords: list[str], strict: bool = False,
     list
         Resulting list of values that can be unpacked onto local variables.
     """
-    unpacked_args = unpack_args(_args, keywords)
-    unpacked_kwargs = upack_kwargs(_kwargs, keywords)
+    unpacked_args: dict[Any, Any]
+    unpacked_kwargs: dict[Any, Any]
+
+    if not _args:
+        unpacked_args = unpack_args((), keywords)
+    else:
+        unpacked_args = unpack_args(_args, keywords)
+    if not _kwargs:
+        unpacked_kwargs = unpack_kwargs({}, keywords)
+    else:
+        unpacked_kwargs = unpack_kwargs(_kwargs, keywords)
     stage = flatten_dict({**unpacked_args, **unpacked_kwargs})
     if strict and (set(stage.keys()) != set(keywords)):
         raise KeyError(f'The following requested keywords are missing: \
@@ -260,7 +269,8 @@ def load_configs(vals: Union[str, dict], full_flat: bool) -> dict:
     return output
 
 
-def extract_functions(input_class: Any, built_ins: bool = False) -> list[str]:
+def extract_functions(input_class: Any, built_ins: bool = False) \
+        -> Optional[list[str]]:
     """
     Get functions list from a given class object
 
@@ -276,14 +286,18 @@ def extract_functions(input_class: Any, built_ins: bool = False) -> list[str]:
     list[str]
         List of public methods name for the given object.
     """
+    raw_methods: Optional[list[str]]
+
     if built_ins:
         raw_methods = dir(input_class)
     else:
         raw_methods = dir(input_class) if type(input_class) not in \
             [str, int, float, list, dict, tuple, set] else None
-    try:
-        return [func for func in raw_methods if callable(getattr(input_class,
-                func)) and func.startswith('_') is False]
-    except TypeError:
-        logging.error('The given class is a built-in type. Either change the\
+    if raw_methods:
+        out = [func for func in raw_methods
+               if callable(getattr(input_class, func))
+               and func.startswith('_') is False]
+    else:
+        raise TypeError('The given class is a built-in type. Either change the\
             function call to accept built_ins or provide other input class.')
+    return out

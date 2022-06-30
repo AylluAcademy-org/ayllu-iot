@@ -13,7 +13,7 @@ import json
 import logging
 
 from abc import ABC
-from typing import Union, TypeVar, Generic
+from typing import Union, Generic
 
 from dotenv import load_dotenv  # type: ignore
 from awscrt import io, mqtt, auth  # type: ignore
@@ -23,14 +23,13 @@ from awsiot import mqtt_connection_builder  # type: ignore
 from aylluiot.utils.path_utils import file_exists, validate_path, get_root_path
 from aylluiot.utils.data_utils import load_configs
 from aylluiot.core import Message, Device, Thing
+from aylluiot.devices import TypeDevice
 
 WORKING_DIR = get_root_path()
 
 TARGET_FOLDERS = ['cert', 'key', 'root-ca']
 TARGET_AWS = ['AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_REGION']
 AWS_DEFAULTS = ['aws_access_key_id', 'aws_secret_access_key', 'region']
-
-TypeDevice = TypeVar('TypeDevice', bound=Device)
 
 MESSAGE_TEMPLATE = {
     'client_id': 'Here goes the device id',
@@ -82,7 +81,7 @@ class Callbacks(ABC):
     def on_connection_resumed(self, return_code: mqtt.ConnectReturnCode,
                               session_present: bool, **kwargs) -> None:
         """
-        Callback for MQTT Connection invoked whenever the MQTT connection is 
+        Callback for MQTT Connection invoked whenever the MQTT connection is
         automatically resumed.
 
         Parameters
@@ -90,7 +89,7 @@ class Callbacks(ABC):
         return_code: mqtt.ConnectReturnCode
             Code status from AWSCRT MQTT that indicates connection result.
         session_present: bool
-            True if resuming existing session. False if new session. 
+            True if resuming existing session. False if new session.
         """
         print(f"Connection resumed. Return Code: {return_code} \
                 \n is Session Present: {session_present}")
@@ -143,7 +142,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
     _topic_queue: dict
     _id_cache: list[str]
 
-    def __init__(self, handler_object: TypeDevice,
+    def __init__(self, handler_object,
                  config_path: Union[str, dict] = 'config/aws_config.json'):
         """
         Constructor method for Thing object
@@ -231,7 +230,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         return self._id_cache
 
     @id_cache.setter
-    def id_cache(self, new_id: Union[str, list[str]]) -> None:
+    def id_cache(self, new_id: list[str]) -> None:
         """
         Setter method for id_cache attribute. It doesn't replace the attribute
         but instead append or extend the current list to avoid unintentional
@@ -242,9 +241,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         new_id: Union[str, list[str]]
             Value to be added at the end of current list.
         """
-        if isinstance(new_id, str):
-            self._id_cache.extend([new_id])
-        elif isinstance(new_id, list):
+        if isinstance(new_id, list):
             self._id_cache.extend(new_id)
         else:
             raise TypeError("Provide a valid new_id type")
@@ -428,7 +425,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
                             Using the following queue: \
                             {self.topic_queue[queued_topic]['incoming']}\n")
                         self._process_message(queued_topic, topic)
-                        self.id_cache = queued_topic
+                        self.id_cache = [queued_topic]
                         self.topic_queue.pop(queued_topic)
                         print(
                             f"Done with execution for {queued_topic}. \
@@ -445,7 +442,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
 
     def _process_message(self, msg_topic: str, global_topic: str) -> None:
         """
-        Private method that executes the workflow of a subtopic queue. 
+        Private method that executes the workflow of a subtopic queue.
         Including the publishing back on the channel for the answers.
 
         Parameters
@@ -472,14 +469,14 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
 
     def _unpack_payload(self, input_msg: Message) -> list[Message]:
         """
-        Internal preprocessing function for upcoming messages. Build a list 
+        Internal preprocessing function for upcoming messages. Build a list
         depending on the number of messages to be processed.
         This number is set by the `seq` identifier in the json payload.
 
         Parameters
         ---------
         input_msg: Message
-            Original payload turned as a Message object from the message 
+            Original payload turned as a Message object from the message
             manager function.
 
         Returns
@@ -508,7 +505,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
 
     def _validate_payload(self, input_payload: Message) -> bool:
         """
-        Internal helper function that checks for required parameters in 
+        Internal helper function that checks for required parameters in
         a Message `payload` parameter.
 
         Parameters
@@ -519,7 +516,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         Returns
         -------
         bool
-            It must return True, which means the Message is good to go, 
+            It must return True, which means the Message is good to go,
             else raise a specific Exception.
         """
         payload_keys = input_payload.payload.keys()
@@ -606,7 +603,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         Returns
         -------
         in_queue: bool
-            Either True or False depending if the message is in queue or not. 
+            Either True or False depending if the message is in queue or not.
         """
         try:
             in_queue = check_msg['message_id'] in self.topic_queue.keys()

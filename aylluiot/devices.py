@@ -4,13 +4,16 @@ Set of implementations for Device
 
 # General Imports
 import json
-from typing import Union
+from typing import Union, Generic, TypeVar
 # Module Imports
 from aylluiot.core import Device, Message
 from aylluiot.utils.data_utils import extract_functions, load_configs
 
 
-class DeviceExecutors(Device):
+TypeDevice = TypeVar('TypeDevice', bound=Device)
+
+
+class DeviceExecutors(Device, Generic[TypeDevice]):
     """
     Class implementation for IoT device interacting trough object instances
 
@@ -93,7 +96,7 @@ class DeviceExecutors(Device):
         main = {'message_id': message.message_id}
         cmd = message.payload['cmd'].lower()
         _func = [getattr(obj, f) for obj, f_list in self._executors.items()
-                for f in f_list if f == cmd]
+                 for f in f_list if f == cmd]
         if not _func:
             raise ValueError("The specified command does not exists")
         else:

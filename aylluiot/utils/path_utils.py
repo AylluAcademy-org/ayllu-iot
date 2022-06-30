@@ -3,7 +3,6 @@ Utils submodule related with path and files on system
 """
 
 # General imports
-import json
 import sys
 import os
 import os.path
@@ -71,7 +70,7 @@ def join_paths(left_side: str, right_side: str) -> str:
     left_side: str
         Root component of path. Which will be the left side of concatenation.
     right_side: str
-        Relative path to component. Is able to be fitted as complement of 
+        Relative path to component. Is able to be fitted as complement of
         left side.
 
     Returns

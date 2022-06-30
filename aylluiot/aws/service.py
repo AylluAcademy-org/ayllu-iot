@@ -161,7 +161,7 @@ class Runner:
 
     def run(self) -> None:
         """
-        Service main function that initializes the daemon. 
+        Service main function that initializes the daemon.
         """
         # Wait for all messages to be received.
         # This waits forever if count was set to 0.
