@@ -3,8 +3,10 @@ Utils submodule related with path and files on system
 """
 
 # General imports
+import json
 import sys
 import os
+import os.path
 import shutil
 import logging
 from pathlib import Path
@@ -13,7 +15,7 @@ from typing import Union
 
 def get_root_path() -> str:
     """
-    Set working directory for project root independently of runner device
+    Set working directory for project root independently of user.
 
     Returns
     ------
@@ -60,24 +62,48 @@ def set_working_path(target_paths: Union[str, list] = None) -> None:
         sys.path.insert(0, working_dir)
 
 
-def join_paths(left_side: str, right_side: str):
+def join_paths(left_side: str, right_side: str) -> str:
     """
-    Join to parts of a path
+    Join two parts of a path
+
+    Parameters
+    ----------
+    left_side: str
+        Root component of path. Which will be the left side of concatenation.
+    right_side: str
+        Relative path to component. Is able to be fitted as complement of 
+        left side.
+
+    Returns
+    str
+        New full path with given components concatenation.
     """
     n_left = '/'.join(left_side.split('/')[:-1]) \
         if left_side.split('/')[-1] == '' else left_side
     n_right = '/'.join(right_side.split('/')[1:]) \
         if right_side.split('/')[0] == '.' else right_side
-    return f"{n_left}/{n_right}"
+    return os.path.join(n_left, n_right)
 
 
-def validate_path(
-        input_path: str,
-        use_root: bool = False,
-        exists: bool = False) -> str:
+def validate_path(input_path: str, use_root: bool = False,
+                  exists: bool = False) -> str:
     """
     Turn a relative path into an absolute one or returns one path that could
     be left joined with a parent path
+
+    Parameters
+    ----------
+    input_path: str
+        The given relative path to be processed.
+    use_root: bool, default = False
+        If the repository should be use as root for the `input_path` or not.
+    exists: bool, default = False
+        If the path is exists on the system or not.
+
+    Returns
+    ------
+    str
+        Valid path attending to the given conditions provide.
     """
     if input_path.split('/')[0] == '.' or input_path.split('/')[0] == '..':
         if use_root and exists:
@@ -98,6 +124,22 @@ def validate_path(
 
 
 def _find_path(starting_path: str, target_path: str) -> str:
+    """
+    Helper function to determine if an object exists or not in the system given
+    an absolute starting point an a relative target name.
+
+    Parameters
+    ---------
+    starting_path: str
+        Root path to be use as starting point.
+    target_path: str
+        Relative target directory or file to be found.
+
+    Returns
+    -------
+    return_path: str
+        The full path where to find the target object.
+    """
     # To-do: It needs to verify if the starting_path is not already contain
     # in the target path before going trough os.listdir()
     return_path: str
@@ -115,7 +157,17 @@ def _find_path(starting_path: str, target_path: str) -> str:
 def only_folder_path(input_str: str) -> str:
     """
     Validate if an inputed path is a folder. If it is a file
-    it cuts it down to its parent
+    it cuts it down to its parent.
+
+    Parameters
+    ----------
+    input_str: str
+        The path to be evaluated.
+
+    Returns
+    -------
+    str
+        Valid path until the last avilable folder given the tree directory.
     """
     return input_str if len(input_str.split('/')[-1].split('.')) == 1\
         else '/'.join(input_str.split('/')[:-1])
@@ -173,9 +225,21 @@ def remove_folder(target_path: Union[str, list]) -> None:
             logging.info("Folder %s did not exists", only_folder)
 
 
-def file_exists(target_path: Union[str, list], is_absolute: bool = False):
+def file_exists(target_path: Union[str, list[str]],
+                is_absolute: bool = False) -> Union[bool, list[bool]]:
     """
-    Verify wether a file exists or not
+    Verify wether a file exists or not.
+
+    Parameters
+    ----------
+    target_path: Union[str, list]
+        Single or list of target paths to check.
+
+    Returns
+    -------
+    Union[bool, list[bool]]
+        Single or list of boolean values indicated wether the inputed files
+        exists or not.
     """
     if isinstance(target_path, str):
         if is_absolute:
@@ -190,15 +254,32 @@ def file_exists(target_path: Union[str, list], is_absolute: bool = False):
                     for p in target_path]
 
 
-def save_file(target_path: str, file_name: str, content: str) -> None:
+def save_file(content: Union[str, dict],
+              target_path: str = '../default.txt') -> None:
     """
-    Saves strings to a file specified by inputed path
+    Saves strings to a file specified by inputed path.
+
+    Parameters
+    ----------
+    content: Union[str, dict]
+        The string to be saved as a file.
+    target_path: str
+        Location to save the resulting file, including its name and extension.
     """
     create_folder(target_path)
-    with open(target_path + file_name, 'w') as file:
+    with open(target_path, 'w') as file:
         file.write(str(content))
+    logging.info(f'File created at {target_path}')
 
 
-def remove_file(path: str, name: str) -> None:
-    if os.path.exists(path + name):
-        os.remove(path + name)
+def remove_file(input_path: str) -> None:
+    """
+    Deletes a file from syste.
+
+    Parameters
+    ---------
+    input_path: str
+        Path of file to delete.
+    """
+    if os.path.exists(input_path):
+        os.remove(input_path)

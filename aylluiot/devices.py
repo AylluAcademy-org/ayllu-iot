@@ -1,14 +1,18 @@
+"""
+Set of implementations for Device
+"""
+
 # General Imports
 import json
 from typing import Union
 # Module Imports
 from aylluiot.core import Device, Message
-from aylluiot.utils.data_utils import load_configs
+from aylluiot.utils.data_utils import extract_functions, load_configs
 
 
-class DeviceCardano(Device):
+class DeviceExecutors(Device):
     """
-    Class implementation for IoT device interacting with Cardano interfaces
+    Class implementation for IoT device interacting trough object instances
 
     Attributes
     ----------
@@ -21,12 +25,11 @@ class DeviceCardano(Device):
         Should contain only Enums such as in `scr.iot.commands`
     """
 
-    # To-do: Only import if not loaded
     _device_id: str
     _metadata: dict
-    _executors: dict  # type: ignore
+    _executors: dict
 
-    def __init__(self, self_id: str, executors_list=[], configs=None) -> None:
+    def __init__(self, self_id: str, executors_list: list) -> None:
         """
         Constructor for DeviceCardano class.
 
@@ -34,13 +37,13 @@ class DeviceCardano(Device):
         ------
         device_id: str
             Unique identifier for the device.
+        executors_list: list
+            Instance of classes to be utilized as executors
+        configs: Optional[dict]
         """
         self._device_id = self_id
         self._metadata = {}
-        if executors_list:
-            self._executors = self._initialize_classes(executors_list, configs)
-        else:
-            self._executors = self._initialize_classes([], configs)
+        self._executors = self._initialize_classes(executors_list)
         super().__init__()
         print(f"Device Created: {self.device_id}")
 
@@ -118,28 +121,11 @@ class DeviceCardano(Device):
                 print("There was an error returning your result")
         return main
 
-    def _initialize_classes(self, classes_list: list,
-                            set_configs: Union[str, dict]) -> dict:
+    def _initialize_classes(self, instances: list) -> dict:
         """
         Load necessary objects for runtime executions on data threatment
         """
-        return {}
-        # initialized_objects: dict[Any, list[str]] = {}
-        # for obj in classes_list:
-        #     if obj == 'Node':
-        #         node = Node(set_configs)
-        #         initialized_objects[node] = extract_functions(node)
-        #     elif obj == 'Wallet':
-        #         wallet = Wallet(set_configs)
-        #         initialized_objects[wallet] = extract_functions(wallet)
-        #     elif obj == 'Keys':
-        #         keys = Keys(set_configs)
-        #         initialized_objects[keys] = extract_functions(keys)
-        #     elif obj == 'IotExtensions':
-        #         iot_extensions = IotExtensions(set_configs)
-        #         initialized_objects[iot_extensions] \
-        #                   = extract_functions(iot_extensions)
-        #     else:
-        #         raise KeyError('Specified object is not \
-        #                           implemented for this Device')
-        # return initialized_objects
+        if instances:
+            return {ins: extract_functions(ins) for ins in instances}
+        else:
+            raise TypeError('The given list is empty.')
