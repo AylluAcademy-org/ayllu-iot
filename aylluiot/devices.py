@@ -92,10 +92,12 @@ class DeviceExecutors(Device):
         super().validate_inputs(message.payload)
         main = {'message_id': message.message_id}
         cmd = message.payload['cmd'].lower()
-        func = [getattr(obj, f) for obj, f_list in self._executors.items()
-                for f in f_list if f == cmd][0]
-        if not func:
+        _func = [getattr(obj, f) for obj, f_list in self._executors.items()
+                for f in f_list if f == cmd]
+        if not _func:
             raise ValueError("The specified command does not exists")
+        else:
+            func = _func[0]
         try:
             has_args = True if message.payload['args'] else None
         except KeyError:
@@ -113,12 +115,14 @@ class DeviceExecutors(Device):
             main.update(p)
         elif isinstance(params, dict):
             main.update(params)
-        else:
+        elif (isinstance(params, str)) or (isinstance(params, bytes)):
             try:
                 from_json = json.loads(params)
                 main.update(from_json)
             except ValueError:
                 print("There was an error returning your result")
+        else:
+            main.update({'output': params})
         return main
 
     def _initialize_classes(self, instances: list) -> dict:

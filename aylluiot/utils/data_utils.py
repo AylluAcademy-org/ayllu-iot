@@ -118,6 +118,7 @@ def upack_kwargs(vals: dict, keywords: list,
             result[key] = check_for_json(val)
         elif not isinstance(val, str) and key in keywords:
             result[key] = val
+    result = _clear_duplicates(result)
     diff = set(keywords).difference(set(result.keys()))
     if (len(diff) > 0) and fill:
         for key in diff:
@@ -163,11 +164,41 @@ def unpack_args(vals: tuple[Any], keywords: list,
                 output[keywords[i]] = None
             else:
                 break
+    output = _clear_duplicates(output)
     return output
 
 
-def parse_inputs(keywords: list[str], strict: bool = False, *args, **kwargs) \
-        -> list:
+def _clear_duplicates(input_val: dict) -> dict:
+    """
+    Helper function that checks wether keys are repeated inside and outside
+    the input dictionary.
+
+    Parameters
+    ----------
+    input_val: dict
+        Dictionary to be checked.
+
+    Returns
+    -------
+    dict
+        Dictionary already cleaned.
+    """
+    to_check = [n for n, v in input_val.items() if isinstance(v, dict)]
+    for key in to_check:
+        try:
+            temp_keys = input_val[key].keys()
+            coincidences = set(input_val.keys()).intersection(set(temp_keys))
+            if len(coincidences) > 0:
+                new_vals = {c: input_val[key][c] for c in coincidences}
+            input_val.update(new_vals)
+        except AttributeError:
+            break
+    return input_val
+
+
+def parse_inputs(keywords: list[str], strict: bool = False,
+                 _args: Optional[tuple] = (),
+                 _kwargs: Optional[dict] = {}) -> list:
     """
     Parse *args and **kwargs for a functions that requires specific variables
     to work.
@@ -186,11 +217,9 @@ def parse_inputs(keywords: list[str], strict: bool = False, *args, **kwargs) \
     list
         Resulting list of values that can be unpacked onto local variables.
     """
-    if args:
-        _args = unpack_args(args, keywords)
-    elif kwargs:
-        _kwargs = upack_kwargs(kwargs, keywords)
-    stage = flatten_dict({**_args, **_kwargs})
+    unpacked_args = unpack_args(_args, keywords)
+    unpacked_kwargs = upack_kwargs(_kwargs, keywords)
+    stage = flatten_dict({**unpacked_args, **unpacked_kwargs})
     if strict and (set(stage.keys()) != set(keywords)):
         raise KeyError(f'The following requested keywords are missing: \
             {set(stage.keys()).difference(set(keywords))}')
