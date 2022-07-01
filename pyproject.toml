@@ -5,8 +5,31 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "AylluIoT"
 version = "1.0.0"
-description = "Python Library to run an IoT system."
+authors = [ { name="Ayllu Academy", email="Ayllu.Academy@ayllu.io" } ]
+maintainers = [ { name="Giancarlo P", email="gpablo@ayllu.io" }, { name="Moxie" } ]
+description = "Python Library to run IoT systems."
+license = { file="LICENSE" }
 readme = "README.md"
+keywords = ["iot", "ayllu"]
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "python-dotenv==0.20.0"
+]
+
+[project.optional-dependencies]
+AWS = [
+    "awscrt==0.13.11",
+    "awsiotsdk==1.11.2"
+]
+
+[project.urls]
+"Homepage" = "http://ayllu.io/"
+"GitHub" = "https://github.com/AylluAcademy-org"
 
 [tool.setuptools]
 packages = ["aylluiot"]
