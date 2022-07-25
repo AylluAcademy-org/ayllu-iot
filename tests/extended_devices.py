@@ -1,5 +1,5 @@
 """
-Support implementations for different contexts that will help testing out the 
+Support implementations for different contexts that will help testing out the
 devices objects.
 """
 
