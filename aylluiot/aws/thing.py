@@ -151,7 +151,6 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         config_path: str
             Configuration path for AWS variables.
         """
-        load_dotenv()
         self._files_setup(config_path)
         if issubclass(type(handler_object), Device):
             super().__init__()
@@ -322,6 +321,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
             for Certificate and Keys of AWS IoT Core.
         """
         self._metadata = load_configs(vals, False)
+        load_dotenv(f"{self.metadata['root']}/.env")
         for f in TARGET_FOLDERS:
             validate_path(self.metadata[f], self.metadata['root'], True)
         self._download_certificates(validate_path(self.metadata['root-ca'],
