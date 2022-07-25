@@ -232,7 +232,7 @@ def parse_inputs(keywords: list[str], strict: bool = False,
     return [stage[k] for k in keywords]
 
 
-def load_configs(vals: Union[str, dict], full_flat: bool) -> Optional[dict]:
+def load_configs(vals: Union[str, dict], full_flat: bool) -> dict:
     """
     Loads configuration files into a dictionary to be use for reading configs
 
@@ -248,7 +248,7 @@ def load_configs(vals: Union[str, dict], full_flat: bool) -> Optional[dict]:
     dict:
         The loaded dictionary containing the key, value from the given input.
     """
-    output: dict = {}
+    output: dict
     if isinstance(vals, str):
         try:
             with open(vals) as file:
@@ -265,6 +265,7 @@ def load_configs(vals: Union[str, dict], full_flat: bool) -> Optional[dict]:
         return output
     else:
         raise TypeError('Not supported configuration\'s input')
+    return {}
 
 
 def extract_functions(input_class: Any, built_ins: bool = False) \

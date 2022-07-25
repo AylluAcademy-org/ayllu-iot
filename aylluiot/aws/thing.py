@@ -317,7 +317,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
 
         Parameters
         ----------
-        vals: Union[str, dict]
+        vals: str
             The set of configuration or file location that describes the paths
             for Certificate and Keys of AWS IoT Core.
         """

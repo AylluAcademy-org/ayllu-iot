@@ -42,7 +42,6 @@ class DeviceExecutors(Device, Generic[TypeDevice]):
             Unique identifier for the device.
         executors_list: list
             Instance of classes to be utilized as executors
-        configs: Optional[dict]
         """
         self._device_id = self_id
         self._metadata = {}
@@ -68,7 +67,7 @@ class DeviceExecutors(Device, Generic[TypeDevice]):
 
         Parameters
         ---------
-        vals: Optional[str, dict]
+        vals: Union[str, dict]
             The parameters to be set. If str it should be an json
             file to be read. Else, an already loaded python
             dictionary.
