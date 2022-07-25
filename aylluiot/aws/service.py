@@ -8,7 +8,6 @@ from datetime import datetime
 
 # Module imports
 from aylluiot.aws.thing import IotCore
-from aylluiot.devices import DeviceExecutors
 
 
 class RepeatTimer(Timer):
@@ -45,11 +44,11 @@ class Runner:
     _cache_timer: RepeatTimer
     _queue_timer: RepeatTimer
 
-    def __init__(self) -> None:
+    def __init__(self, thing_object: IotCore) -> None:
         """
         Constructor method for Runner object.
         """
-        self._thing = IotCore(DeviceExecutors)
+        self._thing = thing_object
         self._event_thread = Event()
         self._cache_timer = RepeatTimer(300.0, self._clear_cache)
         self._queue_timer = RepeatTimer(3600.0, self._clear_remnants)

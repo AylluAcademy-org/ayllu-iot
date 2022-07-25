@@ -7,9 +7,6 @@ import logging
 from typing import Any, Union, Optional
 import json
 
-# Module imports
-from aylluiot.utils.path_utils import validate_path
-
 
 def check_for_json(input_str: str) -> Union[dict, str]:
     """
@@ -235,7 +232,7 @@ def parse_inputs(keywords: list[str], strict: bool = False,
     return [stage[k] for k in keywords]
 
 
-def load_configs(vals: Union[str, dict], full_flat: bool) -> dict:
+def load_configs(vals: Union[str, dict], full_flat: bool) -> Optional[dict]:
     """
     Loads configuration files into a dictionary to be use for reading configs
 
@@ -251,22 +248,23 @@ def load_configs(vals: Union[str, dict], full_flat: bool) -> dict:
     dict:
         The loaded dictionary containing the key, value from the given input.
     """
-    output: dict
+    output: dict = {}
     if isinstance(vals, str):
         try:
-            with open(validate_path(vals, False)) as file:
+            with open(vals) as file:
                 output = json.load(file)
                 if check_nested_dicts(output):
                     output = flatten_dict(output, full_flat)
+            return output
         except FileNotFoundError:
             logging.error('The provided file was not found')
     elif isinstance(vals, dict):
         output = vals
         if check_nested_dicts(output):
             output = flatten_dict(output, full_flat)
+        return output
     else:
         raise TypeError('Not supported configuration\'s input')
-    return output
 
 
 def extract_functions(input_class: Any, built_ins: bool = False) \
