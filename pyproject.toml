@@ -1,9 +1,9 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "AylluIoT"
+name = "ayllu-iot"
 version = "1.0.1"
 authors = [ { name="Ayllu Academy", email="Ayllu.Academy@ayllu.io" } ]
 maintainers = [ { name="Giancarlo P", email="gpablo@ayllu.io" }, { name="Moxie" } ]
@@ -32,4 +32,4 @@ AWS = [
 "GitHub" = "https://github.com/AylluAcademy-org"
 
 [tool.setuptools]
-package-dir = {"" = "aylluiot"}
+packages = ["aylluiot", "aylluiot.aws", "aylluiot.utils"]
