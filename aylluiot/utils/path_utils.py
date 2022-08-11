@@ -5,37 +5,39 @@ Utils submodule related with path and files on system
 # General imports
 import sys
 import os
-import os.path
 import shutil
+import functools
 import logging
 from pathlib import Path
 from typing import Union
 
 
-def get_root_path() -> str:
+def get_root_path(root_dir_name: Union[str, Path]) -> str:
     """
-    Set working directory for project root independently of user.
+    Get working directory for project root independently of user.
+
+    Parameters
+    ----------
+    root_dir_name: Union[str, Path]
+        The path to be used as root for the operations of the library.
 
     Returns
     ------
     working_dir: str
-        Full path to working directory
+        Full path to working directory.
     """
-    root_dir_name = 'ayllu-iot'
-    root_path = ''
-    path_list = str(Path(__file__)).split('/')
-    index = 0
-    for d in path_list:
-        if d != root_dir_name:
-            root_path += d + '/'
-            index += 1
-        else:
-            if (path_list[index + 1] == root_dir_name):
-                root_path += d + '/'
-                break
-            else:
-                break
-    return root_path + root_dir_name
+    _error_message = "The specified path hasn\'t been added to path\
+                yet. Please `set_working_path` prior."
+    filtered_paths = list(filter(lambda x: str(root_dir_name) in x,
+                                 sys.path))
+    if len(filtered_paths) == 1:
+        return filtered_paths[0]
+    elif len(filtered_paths) > 1:
+        return functools.reduce(lambda x, y:
+                                x if len(x.split('/')) < len(y.split('/'))
+                                else y, filtered_paths)
+    else:
+        raise KeyError(_error_message)
 
 
 def set_working_path(target_paths: Union[str, list] = None) -> None:
@@ -49,16 +51,17 @@ def set_working_path(target_paths: Union[str, list] = None) -> None:
         Folder(s) and/or file(s) to be included in path.
         When default, still appends root directory to path.
     """
-    working_dir = get_root_path()
+    _error_message = 'The provided path(s) is not from a valid type.'
     if isinstance(target_paths, list):
         for t_path in target_paths:
-            n_dir = f'{working_dir}/{t_path}'
-            sys.path.insert(0, n_dir)
-    elif isinstance(target_paths, str):
-        n_dir = f'{working_dir}/{target_paths}'
-        sys.path.insert(0, n_dir)
+            if isinstance(t_path, str) or isinstance(t_path, Path):
+                sys.path.insert(0, str(t_path))
+            else:
+                raise TypeError(_error_message)
+    elif isinstance(target_paths, str) or isinstance(target_paths, Path):
+        sys.path.insert(0, target_paths)
     else:
-        sys.path.insert(0, working_dir)
+        raise TypeError(_error_message)
 
 
 def join_paths(left_side: str, right_side: str) -> str:
@@ -84,7 +87,7 @@ def join_paths(left_side: str, right_side: str) -> str:
     return os.path.join(n_left, n_right)
 
 
-def validate_path(input_path: str, use_root: bool = False,
+def validate_path(input_path: str, root_reference: str = "",
                   exists: bool = False) -> str:
     """
     Turn a relative path into an absolute one or returns one path that could
@@ -105,19 +108,19 @@ def validate_path(input_path: str, use_root: bool = False,
         Valid path attending to the given conditions provide.
     """
     if input_path.split('/')[0] == '.' or input_path.split('/')[0] == '..':
-        if use_root and exists:
-            return _find_path(get_root_path(),
+        if root_reference and exists:
+            return _find_path(root_reference,
                               '/'.join(input_path.split('/')[1:]))
-        elif use_root and not exists:
-            return join_paths(get_root_path(),
+        elif root_reference and not exists:
+            return join_paths(root_reference,
                               '/'.join(input_path.split('/')[1:]))
         else:
             return '/'.join(input_path.split('/')[1:])
     else:
-        if use_root and exists:
-            return _find_path(get_root_path(), input_path)
-        elif use_root and not exists:
-            return join_paths(get_root_path(), input_path)
+        if root_reference and exists:
+            return _find_path(root_reference, input_path)
+        elif root_reference and not exists:
+            return join_paths(root_reference, input_path)
         else:
             return input_path
 
@@ -244,12 +247,13 @@ def file_exists(target_path: Union[str, list[str]],
         if is_absolute:
             return os.path.exists(target_path)
         else:
-            return os.path.exists(validate_path(target_path, True))
+            return os.path.exists(validate_path(input_path=target_path,
+                                                exists=True))
     else:
         if is_absolute:
             return [os.path.exists(p) for p in target_path]
         else:
-            return [os.path.exists(validate_path(p, True))
+            return [os.path.exists(validate_path(input_path=p, exists=True))
                     for p in target_path]
 
 

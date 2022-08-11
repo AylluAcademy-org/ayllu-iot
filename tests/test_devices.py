@@ -35,7 +35,7 @@ def make_message() -> Callable:
         Returns
         -------
         Message
-            Message object with default `message_id` of '1' and the payload 
+            Message object with default `message_id` of '1' and the payload
             given.
         """
         return Message(message_id='1', payload=cmd)
@@ -79,19 +79,19 @@ def device_executor() -> Callable:
 @pytest.fixture
 def mock_configs() -> dict:
     """
-    Simple fixture that returns a template `metadata` for Devices 
+    Simple fixture that returns a template `metadata` for Devices
     implementations.
 
     Returns
     dict
-        Default dict with as key the string 'label' and as value 
+        Default dict with as key the string 'label' and as value
         the str 'pytest'.
     """
     return {'label': 'pytest'}
 
 
 def test_de_constructor(device_executor, mock_configs) -> None:
-    """ 
+    """
     Test DeviceExecutors constructor.
 
     Parameters:

@@ -1,5 +1,5 @@
 """
-Suite of tests for library 'utilities' module.
+Suite of tests for library 'data' utilities submodule.
 """
 
 # Package imports
@@ -18,8 +18,8 @@ def test_parse_inputs() -> None:
 
     output_1_a, output_1_b = parse_inputs(keywords=test_keywords,
                                           _args=test_args_one)
-    output_2_a, output_2_b = parse_inputs(keywords=test_keywords, 
-                                            _args=test_args_two)
+    output_2_a, output_2_b = parse_inputs(keywords=test_keywords,
+                                          _args=test_args_two)
 
     output_1_c, output_1_d = parse_inputs(keywords=test_keywords,
                                           _kwargs=test_kwargs)

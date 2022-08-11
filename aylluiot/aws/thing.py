@@ -13,19 +13,17 @@ import json
 import logging
 
 from abc import ABC
-from typing import Union, Generic
+from typing import Generic
 
 from dotenv import load_dotenv  # type: ignore
 from awscrt import io, mqtt, auth  # type: ignore
 from awsiot import mqtt_connection_builder  # type: ignore
 
 # Module imports
-from aylluiot.utils.path_utils import file_exists, validate_path, get_root_path
+from aylluiot.utils.path_utils import file_exists, validate_path
 from aylluiot.utils.data_utils import load_configs
 from aylluiot.core import Message, Device, Thing
 from aylluiot.devices import TypeDevice
-
-WORKING_DIR = get_root_path()
 
 TARGET_FOLDERS = ['cert', 'key', 'root-ca']
 TARGET_AWS = ['AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_REGION']
@@ -142,8 +140,7 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
     _topic_queue: dict
     _id_cache: list[str]
 
-    def __init__(self, handler_object,
-                 config_path: Union[str, dict] = 'config/aws_config.json'):
+    def __init__(self, handler_object, config_path: str):
         """
         Constructor method for Thing object
 
@@ -151,17 +148,13 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         ----------
         handler_object: TypeDevice
             Implementation of Device object to be used as handler.
-        config_path: Union[str, dict], default = 'config/aws_config.json'
+        config_path: str
             Configuration path for AWS variables.
         """
-        load_dotenv()
-        configs = config_path \
-            if config_path != "config/aws_config.json" else \
-            f'{WORKING_DIR}/{config_path}'
-        self._files_setup(configs)
-        if issubclass(handler_object, Device):
+        self._files_setup(config_path)
+        if issubclass(type(handler_object), Device):
             super().__init__()
-            self._handler = handler_object("thing-" + str(uuid4()))
+            self._handler = handler_object
             # Pending adding metadata for handler_object
             self.topic_queue = {}
             self._id_cache = []
@@ -309,28 +302,30 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
                 region=self.metadata['AWS_REGION'],
                 credentials_provider=credentials_provider,
                 http_proxy_options=proxy_options,
-                ca_filepath=validate_path(self.metadata['root-ca'], True),
+                ca_filepath=validate_path(self.metadata['root-ca'],
+                                          self.metadata['root'], True),
                 on_connection_resumed=self.on_connection_resumed,
                 client_id=self._get_client_id(),
                 clean_session=True, keep_alive_secs=30)
         return mqtt_connection
 
-    def _files_setup(self, vals: Union[str, dict]) -> None:
+    def _files_setup(self, vals: str) -> None:
         """
         Private helper function to validate that all the necessary files for
         authentication of AWS are available.
 
         Parameters
         ----------
-        vals: Union[str, dict]
+        vals: str
             The set of configuration or file location that describes the paths
             for Certificate and Keys of AWS IoT Core.
         """
         self._metadata = load_configs(vals, False)
+        load_dotenv(f"{self.metadata['root']}/.env")
         for f in TARGET_FOLDERS:
-            validate_path(self.metadata[f], True, True)
+            validate_path(self.metadata[f], self.metadata['root'], True)
         self._download_certificates(validate_path(self.metadata['root-ca'],
-                                    True))
+                                    self.metadata['root'], True))
         if not all([file_exists(p)
                    for p in [self.metadata['cert'], self.metadata['key']]]):
             raise FileExistsError("RSA Keys are not available at the indicated\

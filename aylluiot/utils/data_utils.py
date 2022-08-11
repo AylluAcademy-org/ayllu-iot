@@ -7,9 +7,6 @@ import logging
 from typing import Any, Union, Optional
 import json
 
-# Module imports
-from aylluiot.utils.path_utils import validate_path
-
 
 def check_for_json(input_str: str) -> Union[dict, str]:
     """
@@ -254,19 +251,21 @@ def load_configs(vals: Union[str, dict], full_flat: bool) -> dict:
     output: dict
     if isinstance(vals, str):
         try:
-            with open(validate_path(vals, False)) as file:
+            with open(vals) as file:
                 output = json.load(file)
                 if check_nested_dicts(output):
                     output = flatten_dict(output, full_flat)
+            return output
         except FileNotFoundError:
             logging.error('The provided file was not found')
     elif isinstance(vals, dict):
         output = vals
         if check_nested_dicts(output):
             output = flatten_dict(output, full_flat)
+        return output
     else:
         raise TypeError('Not supported configuration\'s input')
-    return output
+    return {}
 
 
 def extract_functions(input_class: Any, built_ins: bool = False) \

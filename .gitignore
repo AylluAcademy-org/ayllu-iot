@@ -7,6 +7,7 @@ __pycache__
 
 # Build
 *.egg-info
+dist/
 
 # pyenv
 .python-version
