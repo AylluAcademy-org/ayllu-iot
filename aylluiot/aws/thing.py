@@ -460,7 +460,8 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
                 self.topic_queue[msg_topic]['answers'].extend(
                     [Message(message_id=msg_topic, payload=answer)])
             self.connection.publish(topic=global_topic, payload=output,
-                                    qos=mqtt.QoS.AT_LEAST_ONCE)
+                                    qos=mqtt.QoS.AT_LEAST_ONCE,
+                                    retain=True)
 
     def _unpack_payload(self, input_msg: Message) -> list[Message]:
         """
