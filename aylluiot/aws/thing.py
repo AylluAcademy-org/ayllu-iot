@@ -26,7 +26,7 @@ from aylluiot.core import Message, Device, Thing
 from aylluiot.devices import TypeDevice
 
 TARGET_FOLDERS = ['cert', 'key', 'root-ca']
-TARGET_AWS = ['AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_REGION']
+TARGET_AWS = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION']
 AWS_DEFAULTS = ['aws_access_key_id', 'aws_secret_access_key', 'region']
 
 MESSAGE_TEMPLATE = {
@@ -331,7 +331,8 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
             raise FileExistsError("RSA Keys are not available at the indicated\
                                     path")
         env_vars = ['AWS_IOT_ENDPOINT', 'AWS_IOT_PORT', 'AWS_IOT_UID',
-                    'AWS_REGION', 'AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_TOPIC']
+                    'AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY',
+                    'AWS_TOPIC']
         for var in env_vars:
             try:
                 if os.environ[var] != '':
