@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ayllu-iot"
-version = "1.0.5"
+version = "1.0.6"
 authors = [ { name="Ayllu Academy", email="Ayllu.Academy@ayllu.io" } ]
 maintainers = [ { name="Giancarlo P", email="gpablo@ayllu.io" }, { name="Moxie" } ]
 description = "Python Library to run IoT systems."

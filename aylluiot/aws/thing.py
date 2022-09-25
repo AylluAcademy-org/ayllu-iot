@@ -293,8 +293,9 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         client_bootstrap = io.ClientBootstrap(event_loop_group, default_host)
         proxy_options = None
         credentials_provider = auth.AwsCredentialsProvider\
-            .new_static(access_key_id=self.metadata['AWS_KEY_ID'],
-                        secret_access_key=self.metadata['AWS_SECRET_KEY'])
+            .new_static(access_key_id=self.metadata['AWS_ACCESS_KEY_ID'],
+                        secret_access_key=self.
+                        metadata['AWS_SECRET_ACCESS_KEY'])
         mqtt_connection = mqtt_connection_builder\
             .websockets_with_default_aws_signing(
                 endpoint=self.metadata['AWS_IOT_ENDPOINT'],
