@@ -20,8 +20,8 @@ from awscrt import io, mqtt, auth  # type: ignore
 from awsiot import mqtt_connection_builder  # type: ignore
 
 # Module imports
-from aylluiot.utils.path_utils import file_exists, validate_path
-from aylluiot.utils.data_utils import load_configs
+from aylluiot.utils.path import file_exists, validate_path
+from aylluiot.utils.data import load_configs
 from aylluiot.core import Message, Device, Thing
 from aylluiot.devices import TypeDevice
 

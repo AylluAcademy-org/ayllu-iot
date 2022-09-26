@@ -5,9 +5,10 @@ Set of implementations for Device
 # General Imports
 import json
 from typing import Union, Generic, TypeVar
+from pydantic import BaseModel
 # Module Imports
 from aylluiot.core import Device, Message
-from aylluiot.utils.data_utils import extract_functions, load_configs
+from aylluiot.utils.data import extract_functions, load_configs
 
 
 TypeDevice = TypeVar('TypeDevice', bound=Device)
@@ -154,7 +155,7 @@ class DeviceRelayer(Device, Generic[TypeDevice]):
 
     _device_id: str
     _metadata: dict
-    _validators: dict
+    _validators: list
 
     def __init__(self, self_id: str, validators_list: list) -> None:
         """
@@ -217,8 +218,16 @@ class DeviceRelayer(Device, Generic[TypeDevice]):
         """
         pass
 
-    def _initialize_validators(self, instances: list) -> dict:
+    def _initialize_validators(self, instances: list) -> list:
         """
         Load necessary objects for runtime executions on data threatment.
         """
-        pass
+
+        output: list = []
+
+        for i in instances:
+            if issubclass(i, BaseModel):
+                output.append(i)
+            else:
+                raise TypeError("The given object is not a Pydantic Model!")
+        return output
