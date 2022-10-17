@@ -9,7 +9,6 @@ class Message:
     """
     Class for the data of messages being pass down to devices objects
     """
-
     # Implement sort_index
     message_id: str
     payload: dict
@@ -25,11 +24,14 @@ class Device(ABC):
     ----------
     _device_id: str
         Unique identifier for the device.
+    _device_type: int
+        Identifier for device implementation being use.
     _metadata: dict
         Configuration values necessary for operations.
     """
 
     _device_id: str
+    _device_type: int
     _metadata: dict
 
     @property
@@ -44,6 +46,14 @@ class Device(ABC):
     def metadata(self) -> dict:
         """
         Information to be used by object configurations or other methods
+        """
+
+    @property
+    @abstractmethod
+    def device_type(self) -> int:
+        """
+        Information to be used by the Thing to know which worflow logic
+        to make use of.
         """
 
     @abstractmethod
