@@ -47,6 +47,7 @@ class DeviceExecutors(Device, Generic[TypeDevice]):
         """
         self._device_id = self_id
         self._metadata = {}
+        self._device_type = 1
         self._executors = self._initialize_classes(executors_list)
         super().__init__()
         print(f"Device Created: {self.device_id}")
@@ -78,6 +79,13 @@ class DeviceExecutors(Device, Generic[TypeDevice]):
             dictionary.
         """
         self._metadata = load_configs(vals, True)
+
+    @property
+    def device_type(self) -> int:
+        """
+        Get the device type identifier.
+        """
+        return self._device_type
 
     def message_treatment(self, message: Message) -> dict:
         """
@@ -168,6 +176,7 @@ class DeviceRelayer(Device, Generic[TypeDevice]):
         """
         self._device_id = self_id
         self._metadata = {}
+        self._device_type = 2
         self._validators = self._initialize_validators(validators_list)
         super().__init__()
         print(f"Device Created: {self.device_id}")
@@ -199,6 +208,13 @@ class DeviceRelayer(Device, Generic[TypeDevice]):
             dictionary.
         """
         self._metadata = load_configs(vals, True)
+    
+    @property
+    def device_type(self) -> int:
+        """
+        Get the device type identifier.
+        """
+        return self._device_type
 
     def message_treatment(self, message: Message) -> dict:
         """
@@ -216,7 +232,10 @@ class DeviceRelayer(Device, Generic[TypeDevice]):
             Information containing the results of the command
             passed down through the message.
         """
-        pass
+        super().validate_message(message)
+        super().validate_inputs(message.payload)
+        main = {'message_id': message.message_id}
+        
 
     def _initialize_validators(self, instances: list) -> list:
         """
