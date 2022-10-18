@@ -1,5 +1,5 @@
 """
-Utils submodule related with path and files on system
+Utils submodule related with path and files on system.
 """
 
 # General imports
@@ -25,6 +25,14 @@ def get_root_path(root_dir_name: Union[str, Path]) -> str:
     ------
     working_dir: str
         Full path to working directory.
+
+    See Also
+    --------
+    set_working_path: Add to PATH the target routes.
+
+    Notes
+    -----
+    You should have set a path first before using this function.
     """
     _error_message = "The specified path hasn\'t been added to path\
                 yet. Please `set_working_path` prior."
@@ -42,8 +50,8 @@ def get_root_path(root_dir_name: Union[str, Path]) -> str:
 
 def set_working_path(target_paths: Union[str, list] = None) -> None:
     """
-    Add to path the target routes passed down which are also included inside
-    the repository folder
+    Add to PATH the target routes passed down which are also included 
+    inside the repository folder.
 
     Parameters
     ----------
@@ -71,10 +79,11 @@ def join_paths(left_side: str, right_side: str) -> str:
     Parameters
     ----------
     left_side: str
-        Root component of path. Which will be the left side of concatenation.
+        Root component of path. Which will be the left side of
+        concatenation.
     right_side: str
-        Relative path to component. Is able to be fitted as complement of
-        left side.
+        Relative path to component. Is able to be fitted as complement
+        of left side.
 
     Returns
     str
@@ -90,15 +99,16 @@ def join_paths(left_side: str, right_side: str) -> str:
 def validate_path(input_path: str, root_reference: str = "",
                   exists: bool = False) -> str:
     """
-    Turn a relative path into an absolute one or returns one path that could
-    be left joined with a parent path
+    Turn a relative path into an absolute one or returns one path that
+    could be left joined with a parent path.
 
     Parameters
     ----------
     input_path: str
         The given relative path to be processed.
     use_root: bool, default = False
-        If the repository should be use as root for the `input_path` or not.
+        If the repository should be use as root for the `input_path`
+        or not.
     exists: bool, default = False
         If the path is exists on the system or not.
 
@@ -127,8 +137,8 @@ def validate_path(input_path: str, root_reference: str = "",
 
 def _find_path(starting_path: str, target_path: str) -> str:
     """
-    Helper function to determine if an object exists or not in the system given
-    an absolute starting point an a relative target name.
+    Helper function to determine if an object exists or not in the
+    system given an absolute starting point an a relative target name.
 
     Parameters
     ---------
@@ -158,8 +168,8 @@ def _find_path(starting_path: str, target_path: str) -> str:
 
 def only_folder_path(input_str: str) -> str:
     """
-    Validate if an inputed path is a folder. If it is a file
-    it cuts it down to its parent.
+    Validate if an inputed path is a folder. 
+    If it is a file it cuts it down to its parent.
 
     Parameters
     ----------
@@ -169,7 +179,8 @@ def only_folder_path(input_str: str) -> str:
     Returns
     -------
     str
-        Valid path until the last avilable folder given the tree directory.
+        Valid path until the last avilable folder given the tree
+        directory.
     """
     return input_str if len(input_str.split('/')[-1].split('.')) == 1\
         else '/'.join(input_str.split('/')[:-1])
@@ -177,12 +188,12 @@ def only_folder_path(input_str: str) -> str:
 
 def create_folder(target_path: Union[str, list]) -> None:
     """
-    Creates a folder in the indicated path(s)
+    Creates a folder in the indicated path(s).
 
     Parameters
     ----------
     target_path: Union[str, list]
-        Individual or list of path to folders to be created
+        Individual or list of path to folders to be created.
     """
     if isinstance(target_path, list):
         for t_path in target_path:
@@ -203,12 +214,12 @@ def create_folder(target_path: Union[str, list]) -> None:
 
 def remove_folder(target_path: Union[str, list]) -> None:
     """
-    Deletes folder at system level
+    Deletes folder at system level.
 
     Parameters
     ---------
     target_path: Union[str, list]
-        Individual or list of path to folders to be deleted
+        Individual or list of path to folders to be deleted.
     """
     if isinstance(target_path, list):
         for t_path in target_path:
@@ -240,8 +251,8 @@ def file_exists(target_path: Union[str, list[str]],
     Returns
     -------
     Union[bool, list[bool]]
-        Single or list of boolean values indicated wether the inputed files
-        exists or not.
+        Single or list of boolean values indicated wether the inputed 
+        files exists or not.
     """
     if isinstance(target_path, str):
         if is_absolute:
@@ -267,7 +278,8 @@ def save_file(content: Union[str, dict],
     content: Union[str, dict]
         The string to be saved as a file.
     target_path: str
-        Location to save the resulting file, including its name and extension.
+        Location to save the resulting file,
+        including its name and extension.
     """
     create_folder(target_path)
     with open(target_path, 'w') as file:
@@ -277,7 +289,7 @@ def save_file(content: Union[str, dict],
 
 def remove_file(input_path: str) -> None:
     """
-    Deletes a file from syste.
+    Deletes a file from system.
 
     Parameters
     ---------

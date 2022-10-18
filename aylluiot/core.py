@@ -1,7 +1,11 @@
-from typing import Any
+from typing import Any, Callable, TypeVar
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+import json
+from awscrt import mqtt # type: ignore
+
+TypeProcessor = TypeVar("TypeProcessor", bound=Callable[[Any], None])
 
 
 @dataclass()
@@ -99,7 +103,8 @@ class Thing(ABC):
     _metadata: dict
     _topic_queue: dict
     _handler: Device
-    _id_cache: list
+    _id_cache: list[str]
+    _message_processor: TypeProcessor
 
     @property
     @abstractmethod
@@ -122,6 +127,13 @@ class Thing(ABC):
         Getter for handler
         """
 
+    @property
+    @abstractmethod
+    def message_processor(self) -> TypeProcessor:
+        """
+        Getter for message_processor
+        """
+
     @abstractmethod
     def _create_connection(self) -> Any:
         """
@@ -133,3 +145,64 @@ class Thing(ABC):
         """
         Core function containing message treatment logic
         """
+
+class Processor(ABC):
+    """
+    Abstract class with a set of message processor for different device
+    implementations.
+    """
+
+    @property
+    def device_processor(self, device_type: int) -> TypeProcessor:
+        """
+        Getter method for message_processor function.
+
+        Parameters
+        ----------
+        device_type: int
+            The device implementation type identifier
+
+        Returns
+        ------
+        TypeProcesor
+            The set function for processing messages.
+        """
+        if device_type == 1:
+            return self.executor_processor
+        elif device_type == 2:
+            return self.relayer_processor
+        else:
+            raise TypeError("The provided device type does not exists!\n")
+
+    def executor_processor(self, msg_topic: str, global_topic: str) -> None:
+        """
+        Private method that executes the workflow of a subtopic queue.
+        Including the publishing back on the channel for the answers.
+
+        Parameters
+        ---------
+        msg_topic: str
+            Sub-topic for this specific queue of message(s).
+        global_topic: str
+            The channel topic to which the `Thing` should publish to.
+        """
+        for num, ind_msg in enumerate(self.topic_queue[msg_topic]['incoming']):
+            answer = self.handler.message_treatment(ind_msg)
+            output = json.dumps(answer)
+            print(f'###########################\n \
+                    Publishign result for message in sequence #{num}: {answer}\
+                    \n###########################')
+            if answer == {'msg_id': msg_topic}:
+                self.topic_queue[msg_topic]['answers'].extend(
+                    [Message(message_id=msg_topic, payload={})])
+            else:
+                self.topic_queue[msg_topic]['answers'].extend(
+                    [Message(message_id=msg_topic, payload=answer)])
+            self.connection.publish(topic=global_topic, payload=output,
+                                    qos=mqtt.QoS.AT_LEAST_ONCE,
+                                    retain=True)
+
+    def relayer_processor(self) -> None:
+        """
+        """
+        pass
