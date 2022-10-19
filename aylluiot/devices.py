@@ -156,7 +156,7 @@ class DeviceRelayer(Device, Generic[TypeDevice]):
     Class implemention for an IoT Message Relayer. It specializes in validating
     and formatting messages gotten from other instances to be processed by
     another topic `DeviceExecutor` instance.
-    
+
     Attributes
     ----------
     _device_id: str
@@ -209,7 +209,7 @@ class DeviceRelayer(Device, Generic[TypeDevice]):
             dictionary.
         """
         self._metadata = load_configs(vals, True)
-    
+
     @property
     def device_type(self) -> int:
         """
@@ -217,14 +217,14 @@ class DeviceRelayer(Device, Generic[TypeDevice]):
         """
         return self._device_type
 
-    def message_treatment(self, message: Message) -> dict:
+    def message_treatment(self, message: Message) -> None:
         """
         Main function to handle double way traffic of IoT Service.
 
         Parameters
         --------
         message: core.Message
-            Message object containing the necessary information for 
+            Message object containing the necessary information for
             its processing.
 
         Returns
@@ -235,8 +235,7 @@ class DeviceRelayer(Device, Generic[TypeDevice]):
         """
         super().validate_message(message)
         super().validate_inputs(message.payload)
-        main = {'message_id': message.message_id}
-        
+        _ = {'message_id': message.message_id}
 
     def _initialize_validators(self, instances: list) -> list:
         """

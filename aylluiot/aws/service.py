@@ -5,6 +5,7 @@ Runner for AWS IoT Thing Implementation
 # General imports
 from threading import Event, Timer
 from datetime import datetime
+import sys
 
 # Module imports
 from aylluiot.aws.thing import IotCore
@@ -179,4 +180,7 @@ class Runner:
             print("Disconnecting...")
             disconnect_future = self.thing.connection.disconnect()
             disconnect_future.result()
-            print("Disconnected!")
+            self.event_thread.clear()
+            self.cache_timer.cancel()
+            self.queue_timer.cancel()
+            sys.exit("Disconnected!")

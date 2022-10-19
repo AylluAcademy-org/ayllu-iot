@@ -50,7 +50,7 @@ def get_root_path(root_dir_name: Union[str, Path]) -> str:
 
 def set_working_path(target_paths: Union[str, list] = None) -> None:
     """
-    Add to PATH the target routes passed down which are also included 
+    Add to PATH the target routes passed down which are also included
     inside the repository folder.
 
     Parameters
@@ -168,7 +168,7 @@ def _find_path(starting_path: str, target_path: str) -> str:
 
 def only_folder_path(input_str: str) -> str:
     """
-    Validate if an inputed path is a folder. 
+    Validate if an inputed path is a folder.
     If it is a file it cuts it down to its parent.
 
     Parameters
@@ -251,7 +251,7 @@ def file_exists(target_path: Union[str, list[str]],
     Returns
     -------
     Union[bool, list[bool]]
-        Single or list of boolean values indicated wether the inputed 
+        Single or list of boolean values indicated wether the inputed
         files exists or not.
     """
     if isinstance(target_path, str):

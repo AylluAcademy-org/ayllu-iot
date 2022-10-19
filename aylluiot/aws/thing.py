@@ -3,7 +3,6 @@ Thing object implementations that enable interactiong with AWS services.
 """
 
 # General imports
-from cgitb import handler
 import sys
 import os
 import subprocess
@@ -40,6 +39,7 @@ WARNING_TEMPLATE = f"Please follow the guidelines: {MESSAGE_TEMPLATE}\n\
             Note that if any of your commands has an argument you \
             have to fill with `null` the rest of the list to make it \
             clear which correspond to which!\nTry sending a new request...\n"
+
 
 class Callbacks(ABC):
     """
@@ -122,7 +122,7 @@ class Callbacks(ABC):
                 logging.info(f"Resubscribe to topic: {t}")
 
 
-class IotCore(Thing, Callbacks, Processor, Generic[TypeDevice]):
+class IotCore(Thing, Callbacks, Processor, Generic[TypeDevice, TypeProcessor]):
     """
     Thing object that manages the incoming traffic trough Device objects
 
@@ -437,7 +437,12 @@ class IotCore(Thing, Callbacks, Processor, Generic[TypeDevice]):
                             execution from: {queued_topic}\n\
                             Using the following queue: \
                             {self.topic_queue[queued_topic]['incoming']}\n")
-                        self.message_processor(queued_topic, topic)
+                        device_response = self.message_processor(
+                                    self.topic_queue[queued_topic]['incoming'],
+                                    self.handler, self.connection,
+                                    queued_topic, topic)
+                        self.topic_queue[queued_topic]['answers']\
+                            .extend(device_response)
                         self.id_cache = [queued_topic]
                         self.topic_queue.pop(queued_topic)
                         print(

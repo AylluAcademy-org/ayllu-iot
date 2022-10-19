@@ -1,11 +1,9 @@
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, TypeVar, Generic
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 import json
-from awscrt import mqtt # type: ignore
-
-TypeProcessor = TypeVar("TypeProcessor", bound=Callable[[Any], None])
+from awscrt import mqtt  # type: ignore
 
 
 @dataclass()
@@ -95,7 +93,13 @@ class Device(ABC):
             raise AssertionError("The body of the message is not a dictionary")
 
 
-class Thing(ABC):
+TypeProcessor = TypeVar("TypeProcessor",
+                        bound=Callable[
+                            [list[Any], Device, mqtt.Connection, str, str],
+                            list])
+
+
+class Thing(ABC, Generic[TypeProcessor]):
     """
     Boilerplate for Thing implementation for different platforms.
     """
@@ -146,14 +150,15 @@ class Thing(ABC):
         Core function containing message treatment logic
         """
 
-class Processor(ABC):
+
+class Processor(ABC, Generic[TypeProcessor]):
     """
     Abstract class with a set of message processor for different device
     implementations.
     """
 
     @classmethod
-    def device_processor(cls, device_type: int) -> TypeProcessor:
+    def device_processor(cls, device_type: int):
         """
         Getter method for message_processor function.
 
@@ -174,7 +179,9 @@ class Processor(ABC):
         else:
             raise TypeError("The provided device type does not exists!\n")
 
-    def _executor_processor(self, msg_topic: str, global_topic: str) -> None:
+    def _executor_processor(self, msg_queue: list, handler_device: Device,
+                            mqtt_connection: mqtt.Connection,
+                            msg_topic: str, global_topic: str) -> list:
         """
         Private method that executes the workflow of a subtopic queue.
         Including the publishing back on the channel for the answers.
@@ -186,23 +193,25 @@ class Processor(ABC):
         global_topic: str
             The channel topic to which the `Thing` should publish to.
         """
-        for num, ind_msg in enumerate(self.topic_queue[msg_topic]['incoming']):
-            answer = self.handler.message_treatment(ind_msg)
+        output_queue = []
+        for num, ind_msg in enumerate(msg_queue):
+            answer = handler_device.message_treatment(ind_msg)
             output = json.dumps(answer)
             print(f'###########################\n \
                     Publishign result for message in sequence #{num}: {answer}\
                     \n###########################')
             if answer == {'msg_id': msg_topic}:
-                self.topic_queue[msg_topic]['answers'].extend(
+                output_queue.extend(
                     [Message(message_id=msg_topic, payload={})])
             else:
-                self.topic_queue[msg_topic]['answers'].extend(
+                output_queue.extend(
                     [Message(message_id=msg_topic, payload=answer)])
-            self.connection.publish(topic=global_topic, payload=output,
+            mqtt_connection.publish(topic=global_topic, payload=output,
                                     qos=mqtt.QoS.AT_LEAST_ONCE,
                                     retain=True)
+        return output_queue
 
-    def _relayer_processor(self) -> None:
+    def _relayer_processor(self) -> list:
         """
         """
-        pass
+        return []

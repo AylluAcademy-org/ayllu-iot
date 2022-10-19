@@ -5,7 +5,8 @@ Utils submodule for helpers functions use inside devices definitions.
 # General imports
 from typing import Any, Optional
 
-def extract_functions(input_class: Any, built_ins: bool = False) \
+
+def extract_functions(input_class: Any, built_ins: bool = False)\
         -> Optional[list[str]]:
     """
     Get functions list from a given class object
