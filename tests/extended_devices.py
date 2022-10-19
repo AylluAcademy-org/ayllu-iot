@@ -7,7 +7,7 @@ devices objects.
 import json
 from typing import Optional
 # Package imports
-from aylluiot.utils.data_utils import parse_inputs
+from aylluiot.utils.data import parse_inputs
 
 
 class TestDEFuncsOne:

@@ -4,7 +4,7 @@ Suite of tests for library 'data' utilities submodule.
 # General imports
 from pathlib import Path
 # Package imports
-from aylluiot.utils.path_utils import set_working_path, get_root_path
+from aylluiot.utils.path import set_working_path, get_root_path
 
 
 def test_root_path() -> None:

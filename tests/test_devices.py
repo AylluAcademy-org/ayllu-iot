@@ -90,7 +90,7 @@ def mock_configs() -> dict:
     return {'label': 'pytest'}
 
 
-def test_de_constructor(device_executor, mock_configs) -> None:
+def test_de_constructor(device_executor) -> None:
     """
     Test DeviceExecutors constructor.
 

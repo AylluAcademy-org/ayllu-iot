@@ -8,7 +8,8 @@ from typing import Union, Generic, TypeVar
 from pydantic import BaseModel
 # Module Imports
 from aylluiot.core import Device, Message
-from aylluiot.utils.data import extract_functions, load_configs
+from aylluiot.utils.data import load_configs
+from aylluiot.utils.devices import extract_functions
 
 
 TypeDevice = TypeVar('TypeDevice', bound=Device)
