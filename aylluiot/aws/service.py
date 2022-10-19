@@ -5,6 +5,7 @@ Runner for AWS IoT Thing Implementation
 # General imports
 from threading import Event, Timer
 from datetime import datetime
+import sys
 
 # Module imports
 from aylluiot.aws.thing import IotCore
@@ -169,13 +170,17 @@ class Runner:
 
         # Prevents the execution of the code below (Disconnet) while
         # received_all_event flag is False
-        self._initialize_service()
-        self.cache_timer.start()
-        self.queue_timer.start()
-        self.event_thread.wait()
-
+        try:
+            self._initialize_service()
+            self.cache_timer.start()
+            self.queue_timer.start()
+            self.event_thread.wait()
         # Disconnect
-        print("Disconnecting...")
-        disconnect_future = self.thing.connection.disconnect()
-        disconnect_future.result()
-        print("Disconnected!")
+        except KeyboardInterrupt:
+            print("Disconnecting...")
+            disconnect_future = self.thing.connection.disconnect()
+            disconnect_future.result()
+            self.event_thread.clear()
+            self.cache_timer.cancel()
+            self.queue_timer.cancel()
+            sys.exit("Disconnected!")

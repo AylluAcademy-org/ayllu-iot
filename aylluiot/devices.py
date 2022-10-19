@@ -5,9 +5,11 @@ Set of implementations for Device
 # General Imports
 import json
 from typing import Union, Generic, TypeVar
+from pydantic import BaseModel
 # Module Imports
 from aylluiot.core import Device, Message
-from aylluiot.utils.data_utils import extract_functions, load_configs
+from aylluiot.utils.data import load_configs
+from aylluiot.utils.devices import extract_functions
 
 
 TypeDevice = TypeVar('TypeDevice', bound=Device)
@@ -15,7 +17,8 @@ TypeDevice = TypeVar('TypeDevice', bound=Device)
 
 class DeviceExecutors(Device, Generic[TypeDevice]):
     """
-    Class implementation for IoT device interacting trough object instances
+    Class implementation for IoT device interacting trough object instances.
+    It specializes in processing topics queues and publishing responses.
 
     Attributes
     ----------
@@ -38,19 +41,23 @@ class DeviceExecutors(Device, Generic[TypeDevice]):
 
         Parameters
         ------
-        device_id: str
+        self_id: str
             Unique identifier for the device.
         executors_list: list
             Instance of classes to be utilized as executors
         """
         self._device_id = self_id
         self._metadata = {}
+        self._device_type = 1
         self._executors = self._initialize_classes(executors_list)
         super().__init__()
         print(f"Device Created: {self.device_id}")
 
     @property
     def device_id(self) -> str:
+        """
+        Get the current id from the device.
+        """
         return self._device_id
 
     @property
@@ -73,6 +80,13 @@ class DeviceExecutors(Device, Generic[TypeDevice]):
             dictionary.
         """
         self._metadata = load_configs(vals, True)
+
+    @property
+    def device_type(self) -> int:
+        """
+        Get the device type identifier.
+        """
+        return self._device_type
 
     def message_treatment(self, message: Message) -> dict:
         """
@@ -129,9 +143,110 @@ class DeviceExecutors(Device, Generic[TypeDevice]):
 
     def _initialize_classes(self, instances: list) -> dict:
         """
-        Load necessary objects for runtime executions on data threatment
+        Load necessary objects for runtime executions on data threatment,
         """
         if instances:
             return {ins: extract_functions(ins) for ins in instances}
         else:
             raise TypeError('The given list is empty.')
+
+
+class DeviceRelayer(Device, Generic[TypeDevice]):
+    """
+    Class implemention for an IoT Message Relayer. It specializes in validating
+    and formatting messages gotten from other instances to be processed by
+    another topic `DeviceExecutor` instance.
+
+    Attributes
+    ----------
+    _device_id: str
+    """
+
+    _device_id: str
+    _metadata: dict
+    _validators: list
+
+    def __init__(self, self_id: str, validators_list: list) -> None:
+        """
+        Constructor for DeviceRelayer class.
+
+        Parameters
+        ----------
+        self_id: str
+            Unique identifier for the device
+        """
+        self._device_id = self_id
+        self._metadata = {}
+        self._device_type = 2
+        self._validators = self._initialize_validators(validators_list)
+        super().__init__()
+        print(f"Device Created: {self.device_id}")
+
+    @property
+    def devide_id(self) -> str:
+        """
+        Get the current id from the device.
+        """
+        return self._device_id
+
+    @property
+    def metadata(self) -> dict:
+        """
+        Get the current mentadata.
+        """
+        return self._metadata
+
+    @metadata.setter
+    def metadata(self, vals: Union[str, dict]) -> None:
+        """
+        Set a valid metadata paremeter.
+
+        Parameters
+        ----------
+        vals: Union[str, dict]
+            The parameters to be set. If str it should be an json
+            file to be read. Else, an already loaded python
+            dictionary.
+        """
+        self._metadata = load_configs(vals, True)
+
+    @property
+    def device_type(self) -> int:
+        """
+        Get the device type identifier.
+        """
+        return self._device_type
+
+    def message_treatment(self, message: Message) -> None:
+        """
+        Main function to handle double way traffic of IoT Service.
+
+        Parameters
+        --------
+        message: core.Message
+            Message object containing the necessary information for
+            its processing.
+
+        Returns
+        -------
+        main: dict
+            Information containing the results of the command
+            passed down through the message.
+        """
+        super().validate_message(message)
+        super().validate_inputs(message.payload)
+        _ = {'message_id': message.message_id}
+
+    def _initialize_validators(self, instances: list) -> list:
+        """
+        Load necessary objects for runtime executions on data threatment.
+        """
+
+        output: list = []
+
+        for i in instances:
+            if issubclass(i, BaseModel):
+                output.append(i)
+            else:
+                raise TypeError("The given object is not a Pydantic Model!")
+        return output

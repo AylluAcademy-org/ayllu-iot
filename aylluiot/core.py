@@ -1,7 +1,9 @@
-from typing import Any
+from typing import Any, Callable, TypeVar, Generic
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+import json
+from awscrt import mqtt  # type: ignore
 
 
 @dataclass()
@@ -9,7 +11,6 @@ class Message:
     """
     Class for the data of messages being pass down to devices objects
     """
-
     # Implement sort_index
     message_id: str
     payload: dict
@@ -25,11 +26,14 @@ class Device(ABC):
     ----------
     _device_id: str
         Unique identifier for the device.
+    _device_type: int
+        Identifier for device implementation being use.
     _metadata: dict
         Configuration values necessary for operations.
     """
 
     _device_id: str
+    _device_type: int
     _metadata: dict
 
     @property
@@ -44,6 +48,14 @@ class Device(ABC):
     def metadata(self) -> dict:
         """
         Information to be used by object configurations or other methods
+        """
+
+    @property
+    @abstractmethod
+    def device_type(self) -> int:
+        """
+        Information to be used by the Thing to know which worflow logic
+        to make use of.
         """
 
     @abstractmethod
@@ -81,7 +93,13 @@ class Device(ABC):
             raise AssertionError("The body of the message is not a dictionary")
 
 
-class Thing(ABC):
+TypeProcessor = TypeVar("TypeProcessor",
+                        bound=Callable[
+                            [list[Any], Device, mqtt.Connection, str, str],
+                            list])
+
+
+class Thing(ABC, Generic[TypeProcessor]):
     """
     Boilerplate for Thing implementation for different platforms.
     """
@@ -89,7 +107,8 @@ class Thing(ABC):
     _metadata: dict
     _topic_queue: dict
     _handler: Device
-    _id_cache: list
+    _id_cache: list[str]
+    _message_processor: TypeProcessor
 
     @property
     @abstractmethod
@@ -112,6 +131,13 @@ class Thing(ABC):
         Getter for handler
         """
 
+    @property
+    @abstractmethod
+    def message_processor(self) -> TypeProcessor:
+        """
+        Getter for message_processor
+        """
+
     @abstractmethod
     def _create_connection(self) -> Any:
         """
@@ -123,3 +149,69 @@ class Thing(ABC):
         """
         Core function containing message treatment logic
         """
+
+
+class Processor(ABC, Generic[TypeProcessor]):
+    """
+    Abstract class with a set of message processor for different device
+    implementations.
+    """
+
+    @classmethod
+    def device_processor(cls, device_type: int):
+        """
+        Getter method for message_processor function.
+
+        Parameters
+        ----------
+        device_type: int
+            The device implementation type identifier
+
+        Returns
+        ------
+        TypeProcesor
+            The set function for processing messages.
+        """
+        if device_type == 1:
+            return cls._executor_processor
+        elif device_type == 2:
+            return cls._relayer_processor
+        else:
+            raise TypeError("The provided device type does not exists!\n")
+
+    def _executor_processor(self, msg_queue: list, handler_device: Device,
+                            mqtt_connection: mqtt.Connection,
+                            msg_topic: str, global_topic: str) -> list:
+        """
+        Private method that executes the workflow of a subtopic queue.
+        Including the publishing back on the channel for the answers.
+
+        Parameters
+        ---------
+        msg_topic: str
+            Sub-topic for this specific queue of message(s).
+        global_topic: str
+            The channel topic to which the `Thing` should publish to.
+        """
+        output_queue = []
+        for num, ind_msg in enumerate(msg_queue):
+            answer = handler_device.message_treatment(ind_msg)
+            output = json.dumps(answer)
+            print(f'###########################\n \
+                    Publishign result for message in sequence #{num}: {answer}\
+                    \n###########################')
+            if answer == {'msg_id': msg_topic}:
+                output_queue.extend(
+                    [Message(message_id=msg_topic, payload={})])
+            else:
+                output_queue.extend(
+                    [Message(message_id=msg_topic, payload=answer)])
+            mqtt_connection.publish(topic=global_topic, payload=output,
+                                    qos=mqtt.QoS.AT_LEAST_ONCE,
+                                    retain=True)
+        return output_queue
+
+    def _relayer_processor(self) -> list:
+        """
+        """
+        return []

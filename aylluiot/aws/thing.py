@@ -20,13 +20,14 @@ from awscrt import io, mqtt, auth  # type: ignore
 from awsiot import mqtt_connection_builder  # type: ignore
 
 # Module imports
-from aylluiot.utils.path_utils import file_exists, validate_path
-from aylluiot.utils.data_utils import load_configs
-from aylluiot.core import Message, Device, Thing
+from aylluiot.utils.path import file_exists, validate_path
+from aylluiot.utils.data import load_configs
+from aylluiot.core import Message, Device, Thing, Processor, \
+    TypeProcessor
 from aylluiot.devices import TypeDevice
 
 TARGET_FOLDERS = ['cert', 'key', 'root-ca']
-TARGET_AWS = ['AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_REGION']
+TARGET_AWS = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION']
 AWS_DEFAULTS = ['aws_access_key_id', 'aws_secret_access_key', 'region']
 
 MESSAGE_TEMPLATE = {
@@ -121,7 +122,7 @@ class Callbacks(ABC):
                 logging.info(f"Resubscribe to topic: {t}")
 
 
-class IotCore(Thing, Callbacks, Generic[TypeDevice]):
+class IotCore(Thing, Callbacks, Processor, Generic[TypeDevice, TypeProcessor]):
     """
     Thing object that manages the incoming traffic trough Device objects
 
@@ -139,8 +140,9 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
     _handler: TypeDevice
     _topic_queue: dict
     _id_cache: list[str]
+    _message_processor: TypeProcessor
 
-    def __init__(self, handler_object, config_path: str):
+    def __init__(self, handler_object, config_path: str) -> None:
         """
         Constructor method for Thing object
 
@@ -156,6 +158,8 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
             super().__init__()
             self._handler = handler_object
             # Pending adding metadata for handler_object
+            self._message_processor = Processor.device_processor(
+                                                    self.handler.device_type)
             self.topic_queue = {}
             self._id_cache = []
             self.connection = self._create_connection()
@@ -257,6 +261,18 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         else:
             raise KeyError("Provide a valid number to delete")
 
+    @property
+    def message_processor(self) -> TypeProcessor:
+        """
+        Getter method for message_processor.
+
+        Returns
+        ------
+        TypeProcessor
+            The function to execute processing for the given handler.
+        """
+        return self._message_processor
+
     def _get_client_id(self) -> str:
         """
         Function for accessing 'device_id' on `handler` metadata.
@@ -293,8 +309,9 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         client_bootstrap = io.ClientBootstrap(event_loop_group, default_host)
         proxy_options = None
         credentials_provider = auth.AwsCredentialsProvider\
-            .new_static(access_key_id=self.metadata['AWS_KEY_ID'],
-                        secret_access_key=self.metadata['AWS_SECRET_KEY'])
+            .new_static(access_key_id=self.metadata['AWS_ACCESS_KEY_ID'],
+                        secret_access_key=self.
+                        metadata['AWS_SECRET_ACCESS_KEY'])
         mqtt_connection = mqtt_connection_builder\
             .websockets_with_default_aws_signing(
                 endpoint=self.metadata['AWS_IOT_ENDPOINT'],
@@ -331,7 +348,8 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
             raise FileExistsError("RSA Keys are not available at the indicated\
                                     path")
         env_vars = ['AWS_IOT_ENDPOINT', 'AWS_IOT_PORT', 'AWS_IOT_UID',
-                    'AWS_REGION', 'AWS_KEY_ID', 'AWS_SECRET_KEY', 'AWS_TOPIC']
+                    'AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY',
+                    'AWS_TOPIC']
         for var in env_vars:
             try:
                 if os.environ[var] != '':
@@ -419,7 +437,12 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
                             execution from: {queued_topic}\n\
                             Using the following queue: \
                             {self.topic_queue[queued_topic]['incoming']}\n")
-                        self._process_message(queued_topic, topic)
+                        device_response = self.message_processor(
+                                    self.topic_queue[queued_topic]['incoming'],
+                                    self.handler, self.connection,
+                                    queued_topic, topic)
+                        self.topic_queue[queued_topic]['answers']\
+                            .extend(device_response)
                         self.id_cache = [queued_topic]
                         self.topic_queue.pop(queued_topic)
                         print(
@@ -434,33 +457,6 @@ class IotCore(Thing, Callbacks, Generic[TypeDevice]):
         else:
             print("Ommiting message as it's part of a sequence in \
                 execution...\n")
-
-    def _process_message(self, msg_topic: str, global_topic: str) -> None:
-        """
-        Private method that executes the workflow of a subtopic queue.
-        Including the publishing back on the channel for the answers.
-
-        Parameters
-        ---------
-        msg_topic: str
-            Sub-topic for this specific queue of message(s).
-        global_topic: str
-            The channel topic to which the `Thing` should publish to.
-        """
-        for num, ind_msg in enumerate(self.topic_queue[msg_topic]['incoming']):
-            answer = self.handler.message_treatment(ind_msg)
-            output = json.dumps(answer)
-            print(f'###########################\n \
-                    Publishign result for message in sequence #{num}: {answer}\
-                    \n###########################')
-            if answer == {'msg_id': msg_topic}:
-                self.topic_queue[msg_topic]['answers'].extend(
-                    [Message(message_id=msg_topic, payload={})])
-            else:
-                self.topic_queue[msg_topic]['answers'].extend(
-                    [Message(message_id=msg_topic, payload=answer)])
-            self.connection.publish(topic=global_topic, payload=output,
-                                    qos=mqtt.QoS.AT_LEAST_ONCE)
 
     def _unpack_payload(self, input_msg: Message) -> list[Message]:
         """

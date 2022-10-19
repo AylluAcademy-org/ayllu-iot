@@ -1,5 +1,5 @@
 """
-Just to enable installing in editable mode..
+Just to enable installing in editable mode.
 """
 
 from setuptools import setup

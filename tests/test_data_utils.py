@@ -1,9 +1,9 @@
 """
-Suite of tests for library 'data' utilities submodule.
+Suite of tests for 'data' utilities submodule.
 """
 
 # Package imports
-from aylluiot.utils.data_utils import parse_inputs
+from aylluiot.utils.data import parse_inputs
 
 
 def test_parse_inputs() -> None:
