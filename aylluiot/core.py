@@ -152,8 +152,8 @@ class Processor(ABC):
     implementations.
     """
 
-    @property
-    def device_processor(self, device_type: int) -> TypeProcessor:
+    @classmethod
+    def device_processor(cls, device_type: int) -> TypeProcessor:
         """
         Getter method for message_processor function.
 
@@ -168,13 +168,13 @@ class Processor(ABC):
             The set function for processing messages.
         """
         if device_type == 1:
-            return self.executor_processor
+            return cls._executor_processor
         elif device_type == 2:
-            return self.relayer_processor
+            return cls._relayer_processor
         else:
             raise TypeError("The provided device type does not exists!\n")
 
-    def executor_processor(self, msg_topic: str, global_topic: str) -> None:
+    def _executor_processor(self, msg_topic: str, global_topic: str) -> None:
         """
         Private method that executes the workflow of a subtopic queue.
         Including the publishing back on the channel for the answers.
@@ -202,7 +202,7 @@ class Processor(ABC):
                                     qos=mqtt.QoS.AT_LEAST_ONCE,
                                     retain=True)
 
-    def relayer_processor(self) -> None:
+    def _relayer_processor(self) -> None:
         """
         """
         pass
